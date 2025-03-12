@@ -8,16 +8,16 @@ services:
     env_file:
       - mud.env
 
-  postgresql:
-    image: postgres:17
-    volumes:
-      - ./pgdata:/var/lib/postgresql/data
-    ports:
-      - 5432:5432
-    environment:
-      POSTGRES_USER: postgresql
-      POSTGRES_PASSWORD: postgresql
-      POSTGRES_DB: agonyforge
+    #  postgresql:
+    #  image: postgres:17
+      #   volumes:
+      #      - ./pgdata:/var/lib/postgresql/data
+      #   ports:
+    #     - 5432:5432
+      #   environment:
+      #     POSTGRES_USER: postgresql
+      #     POSTGRES_PASSWORD: postgresql
+  #     POSTGRES_DB: agonyforge
 
 # This is the highest version of RabbitMQ that is supported by AWS's "Amazon MQ"
 # product as of writing this. Any message broker capable of supporting the STOMP
