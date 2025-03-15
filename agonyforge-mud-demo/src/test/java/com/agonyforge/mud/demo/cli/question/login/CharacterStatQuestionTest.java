@@ -78,7 +78,7 @@ public class CharacterStatQuestionTest {
     }
 
     @Test
-    void testAdd() {
+    void testAddWithPluses() {
         Long chId = random.nextLong();
 
         when(ch.getCharacter()).thenReturn(characterComponent);
@@ -96,7 +96,43 @@ public class CharacterStatQuestionTest {
     }
 
     @Test
-    void testAddTooMany() {
+    void testAddWithMultiplePluses() {
+        Long chId = random.nextLong();
+
+        when(ch.getCharacter()).thenReturn(characterComponent);
+        when(mudCharacterRepository.findById(eq(chId))).thenReturn(Optional.of(ch));
+        when(wsContext.getAttributes()).thenReturn(Map.of(MUD_CHARACTER, chId));
+
+        CharacterStatQuestion uut = new CharacterStatQuestion(applicationContext, repositoryBundle);
+        Response response = uut.answer(wsContext, new Input("1++"));
+
+        verify(characterComponent).addBaseStat(eq(Stat.values()[0]), eq(2));
+        verify(mudCharacterRepository).save(eq(ch));
+
+        assertTrue(response.getFeedback().isPresent());
+        assertEquals(question, response.getNext());
+    }
+
+    @Test
+    void testAddWithNumber() {
+        Long chId = random.nextLong();
+
+        when(ch.getCharacter()).thenReturn(characterComponent);
+        when(mudCharacterRepository.findById(eq(chId))).thenReturn(Optional.of(ch));
+        when(wsContext.getAttributes()).thenReturn(Map.of(MUD_CHARACTER, chId));
+
+        CharacterStatQuestion uut = new CharacterStatQuestion(applicationContext, repositoryBundle);
+        Response response = uut.answer(wsContext, new Input("1+2"));
+
+        verify(characterComponent).addBaseStat(eq(Stat.values()[0]), eq(2));
+        verify(mudCharacterRepository).save(eq(ch));
+
+        assertTrue(response.getFeedback().isPresent());
+        assertEquals(question, response.getNext());
+    }
+
+    @Test
+    void testAddTooManyPluses() {
         Long chId = random.nextLong();
 
         lenient().when(characterComponent.getBaseStat(Stat.DEX)).thenReturn(STARTING_STATS);
@@ -105,7 +141,7 @@ public class CharacterStatQuestionTest {
         when(wsContext.getAttributes()).thenReturn(Map.of(MUD_CHARACTER, chId));
 
         CharacterStatQuestion uut = new CharacterStatQuestion(applicationContext, repositoryBundle);
-        Response response = uut.answer(wsContext, new Input("1+"));
+        Response response = uut.answer(wsContext, new Input("1++++++++++"));
 
         verify(characterComponent, never()).addBaseStat(any(Stat.class), anyInt());
 
@@ -113,6 +149,26 @@ public class CharacterStatQuestionTest {
         assertTrue(answer.getOutput().stream().anyMatch(line -> line.contains("[red]")));
         assertEquals(question, response.getNext());
     }
+
+    @Test
+    void testAddTooManyNumber() {
+        Long chId = random.nextLong();
+
+        lenient().when(characterComponent.getBaseStat(Stat.DEX)).thenReturn(STARTING_STATS);
+        when(ch.getCharacter()).thenReturn(characterComponent);
+        when(mudCharacterRepository.findById(eq(chId))).thenReturn(Optional.of(ch));
+        when(wsContext.getAttributes()).thenReturn(Map.of(MUD_CHARACTER, chId));
+
+        CharacterStatQuestion uut = new CharacterStatQuestion(applicationContext, repositoryBundle);
+        Response response = uut.answer(wsContext, new Input("1+10"));
+
+        verify(characterComponent, never()).addBaseStat(any(Stat.class), anyInt());
+
+        Output answer = response.getFeedback().orElseThrow();
+        assertTrue(answer.getOutput().stream().anyMatch(line -> line.contains("[red]")));
+        assertEquals(question, response.getNext());
+    }
+
 
     @Test
     void testInvalidAddition() {
@@ -142,6 +198,7 @@ public class CharacterStatQuestionTest {
         when(wsContext.getAttributes()).thenReturn(Map.of(MUD_CHARACTER, chId));
 
         CharacterStatQuestion uut = new CharacterStatQuestion(applicationContext, repositoryBundle);
+
         Response response = uut.answer(wsContext, new Input("2-"));
 
         verify(characterComponent).addBaseStat(eq(Stat.DEX), eq(-1));
