@@ -108,7 +108,7 @@ public class NonPlayerCreaturePronounEditorQuestionTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "1", "2", "3", "4" })
+    @ValueSource(strings = { "1", "2", "3", "4", "5", "6", "7", "8", "9" })
     void testAnswerSelectPronoun(String input) {
         when(webSocketContext.getAttributes()).thenReturn(Map.of(MEDIT_MODEL, 65L));
         when(mudCharacterPrototypeRepository.findById(eq(65L))).thenReturn(Optional.of(chTemplate));
@@ -123,7 +123,7 @@ public class NonPlayerCreaturePronounEditorQuestionTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "-1", "0", "5", "what" })
+    @ValueSource(strings = { "-1", "0", "10", "what" })
     void testAnswerSelectPronounInvalid(String input) {
         when(webSocketContext.getAttributes()).thenReturn(Map.of(MEDIT_MODEL, 65L));
         when(mudCharacterPrototypeRepository.findById(eq(65L))).thenReturn(Optional.of(chTemplate));

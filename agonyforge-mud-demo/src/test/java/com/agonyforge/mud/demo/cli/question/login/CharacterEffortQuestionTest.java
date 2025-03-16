@@ -7,6 +7,7 @@ import com.agonyforge.mud.core.web.model.Output;
 import com.agonyforge.mud.core.web.model.WebSocketContext;
 import com.agonyforge.mud.demo.cli.RepositoryBundle;
 import com.agonyforge.mud.demo.model.constant.Effort;
+import com.agonyforge.mud.demo.model.constant.Stat;
 import com.agonyforge.mud.demo.model.impl.CharacterComponent;
 import com.agonyforge.mud.demo.model.impl.MudCharacter;
 import com.agonyforge.mud.demo.model.repository.MudCharacterRepository;
@@ -23,6 +24,7 @@ import java.util.Random;
 
 import static com.agonyforge.mud.core.config.SessionConfiguration.MUD_CHARACTER;
 import static com.agonyforge.mud.demo.cli.question.login.CharacterEffortQuestion.STARTING_EFFORTS;
+import static com.agonyforge.mud.demo.cli.question.login.CharacterStatQuestion.STARTING_STATS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
@@ -94,6 +96,61 @@ public class CharacterEffortQuestionTest {
         verify(mudCharacterRepository).save(eq(ch));
 
         assertTrue(response.getFeedback().isPresent());
+        assertEquals(question, response.getNext());
+    }
+
+    @Test
+    void testAddWithMultiplePluses() {
+        Long chId = random.nextLong();
+
+        when(ch.getCharacter()).thenReturn(characterComponent);
+        when(mudCharacterRepository.findById(eq(chId))).thenReturn(Optional.of(ch));
+        when(wsContext.getAttributes()).thenReturn(Map.of(MUD_CHARACTER, chId));;
+
+        CharacterEffortQuestion uut = new CharacterEffortQuestion(applicationContext, repositoryBundle);
+        Response response = uut.answer(wsContext, new Input("1++"));
+
+        verify(characterComponent).addBaseEffort(eq(Effort.BASIC), eq(2));
+        verify(mudCharacterRepository).save(eq(ch));
+
+        assertTrue(response.getFeedback().isPresent());
+        assertEquals(question, response.getNext());
+    }
+
+    @Test
+    void testAddWithNumber() {
+        Long chId = random.nextLong();
+
+        when(ch.getCharacter()).thenReturn(characterComponent);
+        when(mudCharacterRepository.findById(eq(chId))).thenReturn(Optional.of(ch));
+        when(wsContext.getAttributes()).thenReturn(Map.of(MUD_CHARACTER, chId));
+
+        CharacterEffortQuestion uut = new CharacterEffortQuestion(applicationContext, repositoryBundle);
+        Response response = uut.answer(wsContext, new Input("1+2"));
+
+        verify(characterComponent).addBaseEffort(eq(Effort.BASIC), eq(2));
+        verify(mudCharacterRepository).save(eq(ch));
+
+        assertTrue(response.getFeedback().isPresent());
+        assertEquals(question, response.getNext());
+    }
+
+    @Test
+    void testAddTooManyNumber() {
+        Long chId = random.nextLong();
+
+        lenient().when(characterComponent.getBaseEffort(Effort.ULTIMATE)).thenReturn(STARTING_EFFORTS);
+        when(ch.getCharacter()).thenReturn(characterComponent);
+        when(mudCharacterRepository.findById(eq(chId))).thenReturn(Optional.of(ch));
+        when(wsContext.getAttributes()).thenReturn(Map.of(MUD_CHARACTER, chId));
+
+        CharacterEffortQuestion uut = new CharacterEffortQuestion(applicationContext, repositoryBundle);
+        Response response = uut.answer(wsContext, new Input("1+10"));
+
+        verify(characterComponent, never()).addBaseEffort(any(Effort.class), anyInt());
+
+        Output answer = response.getFeedback().orElseThrow();
+        assertTrue(answer.getOutput().stream().anyMatch(line -> line.contains("[red]")));
         assertEquals(question, response.getNext());
     }
 

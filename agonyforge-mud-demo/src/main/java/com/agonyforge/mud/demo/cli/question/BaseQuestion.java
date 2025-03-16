@@ -47,4 +47,16 @@ public abstract class BaseQuestion extends AbstractQuestion {
 
         return chOptional;
     }
+
+    protected Optional<Integer> getStatChangeFromInput(String input, boolean add) {
+        char symbol = add ? '+' : '-';
+        int lastIndex = input.lastIndexOf(symbol);
+
+        int change = (lastIndex == input.length() - 1)
+            ? (int) input.chars().filter(c -> c == symbol).count()
+            : Integer.parseInt(input.substring(lastIndex + 1));
+
+        return Optional.of(add ? change : -change);
+    }
+
 }

@@ -3,14 +3,14 @@ package com.agonyforge.mud.demo.cli.question.login;
 import com.agonyforge.mud.core.cli.Color;
 import com.agonyforge.mud.core.cli.Question;
 import com.agonyforge.mud.core.cli.Response;
-import com.agonyforge.mud.core.web.model.Input;
-import com.agonyforge.mud.core.web.model.Output;
-import com.agonyforge.mud.core.web.model.WebSocketContext;
-import com.agonyforge.mud.demo.cli.RepositoryBundle;
 import com.agonyforge.mud.core.cli.menu.impl.MenuItem;
 import com.agonyforge.mud.core.cli.menu.impl.MenuPane;
 import com.agonyforge.mud.core.cli.menu.impl.MenuPrompt;
 import com.agonyforge.mud.core.cli.menu.impl.MenuTitle;
+import com.agonyforge.mud.core.web.model.Input;
+import com.agonyforge.mud.core.web.model.Output;
+import com.agonyforge.mud.core.web.model.WebSocketContext;
+import com.agonyforge.mud.demo.cli.RepositoryBundle;
 import com.agonyforge.mud.demo.cli.question.BaseQuestion;
 import com.agonyforge.mud.demo.model.constant.Effort;
 import com.agonyforge.mud.demo.model.impl.MudCharacter;
@@ -18,7 +18,10 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 public class CharacterEffortQuestion extends BaseQuestion {
@@ -57,23 +60,41 @@ public class CharacterEffortQuestion extends BaseQuestion {
                 output.append("[red]You don't have any more points to allocate!");
             } else {
                 try {
-                    int i = Integer.parseInt(choice.substring(0, choice.length() - 1)) - 1;
-                    ch.getCharacter().addBaseEffort(Effort.values()[i], 1);
+                    int effortIndex = Integer.parseInt(choice.substring(0, 1)) - 1;
+                    Optional<Integer> add = getStatChangeFromInput(choice, true);
+                    if (add.isEmpty()) {
+                        throw new NumberFormatException();
+                    }
+                    int addCount = add.get();
+                    if (totalPoints + addCount > STARTING_EFFORTS) {
+                        int lessCount = totalPoints + addCount - STARTING_EFFORTS;
+                        output.append("[red]You can't allocate this many points. Allocate %d less!", lessCount);
+                    } else {
+                        ch.getCharacter().addBaseEffort(Effort.values()[effortIndex], addCount);
+                    }
                 } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
                     output.append("[red]Oops! Try a number with a plus or minus!");
                 }
             }
         } else if (choice.contains("-")) {
-            if (totalPoints <= 0) {
-                output.append("[red]You haven't assigned any of your points yet!");
-            } else {
-                try {
-                    int i = Integer.parseInt(choice.substring(0, choice.length() - 1)) - 1;
-                    ch.getCharacter().addBaseEffort(Effort.values()[i], -1);
-                } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
-                    output.append("[red]Oops! Try a number with a plus or minus!");
+            HashMap<Effort, Integer> currentEffortPoints = getEffortValues(ch);
+            try {
+                int effortIndex = Integer.parseInt(choice.substring(0, 1)) - 1;
+                Optional<Integer> remove = getStatChangeFromInput(choice, false);
+                if (remove.isEmpty()) {
+                    throw new NumberFormatException();
                 }
+                int removeCount = remove.get();
+                Effort editedEffort = Effort.values()[effortIndex];
+                if (currentEffortPoints.get(editedEffort) + removeCount < 0) {
+                    output.append("[red]You can't make your stats negative!");
+                } else {
+                    ch.getCharacter().addBaseEffort(editedEffort, removeCount);
+                }
+            } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+                output.append("[red]Oops! Try a number with a plus or minus!");
             }
+
         } else {
             if (choice.equals("S")) {
                 if (totalPoints == STARTING_EFFORTS) {
@@ -98,6 +119,12 @@ public class CharacterEffortQuestion extends BaseQuestion {
         return Arrays.stream(Effort.values())
             .map(ch.getCharacter()::getBaseEffort)
             .reduce(0, Integer::sum);
+    }
+
+    private HashMap<Effort, Integer> getEffortValues(MudCharacter ch) {
+        return Arrays.stream(Effort.values())
+            .collect(Collectors.toMap(effort -> effort, effort -> ch.getCharacter()
+                .getBaseEffort(effort), (a, b) -> b, HashMap::new));
     }
 
     private void populateMenuItems(MudCharacter ch) {

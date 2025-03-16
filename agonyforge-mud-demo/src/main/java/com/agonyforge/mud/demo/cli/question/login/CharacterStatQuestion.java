@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
@@ -63,25 +64,16 @@ public class CharacterStatQuestion extends BaseQuestion {
             } else {
                 try {
                     int statIndex = Integer.parseInt(choice.substring(0, 1)) - 1;
-
-                    int add;
-                    int lastPlusIndex = choice.lastIndexOf("+");
-                    if (lastPlusIndex == choice.length() - 1) {
-                        int plusCount = 0;
-                        for (char c : choice.toCharArray()) {
-                            if (c == '+') {
-                                plusCount++;
-                            }
-                        }
-                        add = plusCount;
-                    } else {
-                        add = Integer.parseInt(choice.substring(lastPlusIndex + 1));
+                    Optional<Integer> add = getStatChangeFromInput(choice, true);
+                    if (add.isEmpty()) {
+                        throw new NumberFormatException();
                     }
-                    if (totalPoints + add > STARTING_STATS) {
-                        int lessCount = totalPoints + add - STARTING_STATS;
+                    int addCount = add.get();
+                    if (totalPoints + addCount > STARTING_STATS) {
+                        int lessCount = totalPoints + addCount - STARTING_STATS;
                         output.append("[red]You can't allocate this many points. Allocate %d less!", lessCount);
                     }else {
-                        ch.getCharacter().addBaseStat(Stat.values()[statIndex], add);
+                        ch.getCharacter().addBaseStat(Stat.values()[statIndex], addCount);
                     }
                 } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
                     output.append(errorString);
@@ -91,25 +83,17 @@ public class CharacterStatQuestion extends BaseQuestion {
             HashMap<Stat, Integer> currentStatPoints = getStatValues(ch);
             try {
                 int statIndex = Integer.parseInt(choice.substring(0, 1)) - 1;
-                int remove;
-                int lastPlusIndex = choice.lastIndexOf("-");
-                if (lastPlusIndex == choice.length() - 1) {
-                    int minusCount = 0;
-                    for (char c : choice.toCharArray()) {
-                        if (c == '-') {
-                            minusCount++;
-                        }
-                    }
-                    remove = minusCount;
-                } else {
-                    remove = Integer.parseInt(choice.substring(lastPlusIndex + 1));
+                Optional<Integer> remove = getStatChangeFromInput(choice, false);
+                if (remove.isEmpty()) {
+                    throw new NumberFormatException();
                 }
+                int removeCount = remove.get();
                 Stat editedStat = Stat.values()[statIndex];
                 System.out.println(remove);
-                if (currentStatPoints.get(editedStat) - remove < 0) {
+                if (currentStatPoints.get(editedStat) + removeCount < 0) {
                     output.append("[red]You can't make your stats negative!");
                 } else {
-                    ch.getCharacter().addBaseStat(editedStat, -remove);
+                    ch.getCharacter().addBaseStat(editedStat, removeCount);
                 }
             } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
                 output.append(errorString);
@@ -133,6 +117,7 @@ public class CharacterStatQuestion extends BaseQuestion {
 
         return new Response(next, output);
     }
+
 
     private int computeStatPoints(MudCharacter ch) {
         return Arrays.stream(Stat.values())
