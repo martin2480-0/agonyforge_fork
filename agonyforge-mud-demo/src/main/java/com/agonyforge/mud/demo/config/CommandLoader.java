@@ -86,6 +86,7 @@ public class CommandLoader {
             refs.put("SPAWN", new CommandReference(30, "SPAWN", "spawnCommand", "Spawn a character."));
             refs.put("PURGE", new CommandReference(30, "PURGE", "purgeCommand", "Destroy an item."));
             refs.put("SLAY", new CommandReference(30, "SLAY", "slayCommand", "Slay a character."));
+            refs.put("FORCE", new CommandReference(30, "FORCE", "forceCommand", "Force a character to do something."));
 
             LOGGER.info("Creating command references");
             commandRepository.saveAll(refs.values());
@@ -134,6 +135,7 @@ public class CommandLoader {
             player.getCommands().add(refs.get("SHOUT"));
             player.getCommands().add(refs.get("TELL"));
             player.getCommands().add(refs.get("WHISPER"));
+            player.getCommands().add(refs.get("FORCE"));
 
             player.getCommands().add(refs.get("TIME"));
 

@@ -47,8 +47,17 @@ public abstract class AbstractCommand implements Command {
     }
 
     protected MudCharacter getCurrentCharacter(WebSocketContext webSocketContext, Output output) {
-        Long chId = (Long) webSocketContext.getAttributes().get(MUD_CHARACTER);
+
+        Long chId;
+
+        if (webSocketContext.getAttributes().containsKey("force")) {
+            chId = (Long) webSocketContext.getAttributes().get("force_id");
+        }else {
+            chId = (Long) webSocketContext.getAttributes().get(MUD_CHARACTER);
+        }
+
         Optional<MudCharacter> chOptional = getRepositoryBundle().getCharacterRepository().findById(chId);
+
 
         if (chOptional.isEmpty()) {
             LOGGER.error("Cannot look up character by ID: {}", chId);
