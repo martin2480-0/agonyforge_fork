@@ -19,7 +19,7 @@ public class ForceCommand extends AbstractCommand {
 
 
     @Autowired
-    public ForceCommand(RepositoryBundle repositoryBundle, CommService commService, ApplicationContext applicationContext, GetCommand getCommand, GetCommand getCommand) {
+    public ForceCommand(RepositoryBundle repositoryBundle, CommService commService, ApplicationContext applicationContext) {
         super(repositoryBundle, commService, applicationContext);
     }
     // FORCE <user> <command> ...
