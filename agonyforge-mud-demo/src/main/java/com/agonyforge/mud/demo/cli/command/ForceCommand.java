@@ -5,23 +5,46 @@ import com.agonyforge.mud.core.web.model.Input;
 import com.agonyforge.mud.core.web.model.Output;
 import com.agonyforge.mud.core.web.model.WebSocketContext;
 import com.agonyforge.mud.demo.cli.RepositoryBundle;
+import com.agonyforge.mud.demo.model.impl.CommandReference;
 import com.agonyforge.mud.demo.model.impl.MudCharacter;
+import com.agonyforge.mud.demo.model.repository.CommandForceRepository;
+import com.agonyforge.mud.demo.model.repository.CommandRepository;
 import com.agonyforge.mud.demo.service.CommService;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Component
 public class ForceCommand extends AbstractCommand {
 
+    private final CommandForceRepository commandForceRepository;
+    private final CommandRepository commandRepository;
+
+    public static final Set<String> SUPPORTED_COMMANDS = Set.of(
+        "down", "south", "up", "north", "east", "west",
+        "northeast", "ne", "northwest", "nw", "southwest", "sw", "southeast", "se",
+        "look", "emote", "whisper", "give", "get", "gossip",
+        "say", "shout", "drop", "wear", "tell", "remove"
+    );
+
+    public static final Set<String> MOVEMENT_COMMANDS = Set.of(
+        "down", "south", "up", "north", "east", "west",
+        "northeast", "ne", "northwest", "nw", "southwest", "sw", "southeast", "se"
+    );
 
     @Autowired
-    public ForceCommand(RepositoryBundle repositoryBundle, CommService commService, ApplicationContext applicationContext) {
+    public ForceCommand(RepositoryBundle repositoryBundle, CommService commService, ApplicationContext applicationContext, CommandForceRepository commandForceRepository, CommandRepository commandRepository) {
         super(repositoryBundle, commService, applicationContext);
+        this.commandForceRepository = commandForceRepository;
+        this.commandRepository = commandRepository;
     }
+
     // FORCE <user> <command> ...
     @Override
     public Question execute(Question question, WebSocketContext webSocketContext, List<String> tokens, Input input, Output output) {
@@ -47,41 +70,45 @@ public class ForceCommand extends AbstractCommand {
         MudCharacter target = targetOptional.get();
 
         String fullCommand = Command.stripFirstWords(input.getInput(), 2);
-        String command = fullCommand.split(" ")[0];
+        String commandName = fullCommand.split(" ")[0];
+
+        Optional<CommandReference> commandReferenceOptional = commandRepository.findByNameIgnoreCase(commandName);
+        if (commandReferenceOptional.isEmpty()) {
+            output.append("[red]Can't find that command.");
+            return question;
+        }
+
+        CommandReference commandReference = commandReferenceOptional.get();
+
+        if (!commandReference.getCommandForce().isForcible()) {
+            output.append("[red]Can't force %s to do: %s", target.getCharacter().getName(), commandName);
+            return question;
+        }
 
         output.append("[yellow]You forced %s to: %s",target.getCharacter().getName(), fullCommand);
         getCommService().sendTo(target, new Output("[yellow]%s forced you to: %s", ch.getCharacter().getName(), fullCommand));
 
-        webSocketContext.getAttributes().put("force", true);
+        // replaces current user with the one who is forced to do something
         webSocketContext.getAttributes().put("force_user", target.getCharacter().getId());
 
-
-        switch (command.toLowerCase()) {
-            case "down", "south" -> {}
-            case "up", "north" -> {}
-            case "east" -> {}
-            case "west" -> {}
-            case "northeast", "ne" -> {}
-            case "northwest", "nw" -> {}
-            case "southwest", "sw" -> {}
-            case "southeast", "se" -> {}
-            case "look" -> {}
-            case "emote" -> {}
-            case "whisper" -> {}
-            case "give" -> {}
-            case "get" -> {}
-            case "gossip" -> {}
-            case "say" -> {}
-            case "shout" -> {}
-            case "drop" -> {}
-            case "wear" -> {}
-            case "tell" -> {}
-            case "remove" -> {}
+        Command command;
+        try {
+            command = this.getApplicationContext().getBean(commandReference.getBeanName(), Command.class);
+        }catch (NoSuchBeanDefinitionException e) {
+            output.append("[red]Command not found");
+            return question;
         }
 
-        webSocketContext.getAttributes().remove("force_user");
-        webSocketContext.getAttributes().remove("force");
+        ArrayList<String> forceCommandTokens = new ArrayList<>();
 
-    return question;
+        for (String token : fullCommand.split(" ")) {
+            forceCommandTokens.add(token.toUpperCase());
+        }
+
+        command.execute(question, webSocketContext,List.of(forceCommandTokens.toArray(new String[0])) , new Input(fullCommand), new Output());
+
+        webSocketContext.getAttributes().remove("force_user");
+
+        return question;
     }
 }

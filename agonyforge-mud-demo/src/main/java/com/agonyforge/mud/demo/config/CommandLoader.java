@@ -1,7 +1,9 @@
 package com.agonyforge.mud.demo.config;
 
+import com.agonyforge.mud.demo.model.impl.CommandForce;
 import com.agonyforge.mud.demo.model.impl.CommandReference;
 import com.agonyforge.mud.demo.model.impl.Role;
+import com.agonyforge.mud.demo.model.repository.CommandForceRepository;
 import com.agonyforge.mud.demo.model.repository.CommandRepository;
 
 import com.agonyforge.mud.demo.model.repository.RoleRepository;
@@ -11,9 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class CommandLoader {
@@ -21,11 +21,13 @@ public class CommandLoader {
 
     private final CommandRepository commandRepository;
     private final RoleRepository roleRepository;
+    private final CommandForceRepository commandForceRepository;
 
     @Autowired
-    public CommandLoader(CommandRepository commandRepository, RoleRepository roleRepository) {
+    public CommandLoader(CommandRepository commandRepository, CommandForceRepository commandForceRepository, RoleRepository roleRepository) {
         this.commandRepository = commandRepository;
         this.roleRepository = roleRepository;
+        this.commandForceRepository = commandForceRepository;
     }
 
     @PostConstruct
@@ -135,11 +137,75 @@ public class CommandLoader {
             player.getCommands().add(refs.get("SHOUT"));
             player.getCommands().add(refs.get("TELL"));
             player.getCommands().add(refs.get("WHISPER"));
-            player.getCommands().add(refs.get("FORCE"));
 
             player.getCommands().add(refs.get("TIME"));
 
             roleRepository.saveAll(List.of(implementor, player));
+
+
+            Map<CommandReference, Boolean> forcible = new HashMap<>();
+
+            forcible.put(refs.get("DOWN"), true);
+            forcible.put(refs.get("SOUTH"), true);
+            forcible.put(refs.get("UP"), true);
+            forcible.put(refs.get("NORTH"), true);
+            forcible.put(refs.get("EAST"), true);
+            forcible.put(refs.get("WEST"), true);
+            forcible.put(refs.get("NORTHEAST"), true);
+            forcible.put(refs.get("NE"), true);
+            forcible.put(refs.get("NORTHWEST"), true);
+            forcible.put(refs.get("NW"), true);
+            forcible.put(refs.get("SOUTHWEST"), true);
+            forcible.put(refs.get("SW"), true);
+            forcible.put(refs.get("SOUTHEAST"), true);
+            forcible.put(refs.get("SE"), true);
+
+            forcible.put(refs.get("LOOK"), true);
+            forcible.put(refs.get("EMOTE"), true);
+            forcible.put(refs.get("WHISPER"), true);
+            forcible.put(refs.get("GIVE"), true);
+            forcible.put(refs.get("GET"), true);
+            forcible.put(refs.get("GOSSIP"), true);
+            forcible.put(refs.get("SAY"), true);
+            forcible.put(refs.get("SHOUT"), true);
+            forcible.put(refs.get("DROP"), true);
+            forcible.put(refs.get("WEAR"), true);
+            forcible.put(refs.get("TELL"), true);
+            forcible.put(refs.get("REMOVE"), true);
+            forcible.put(refs.get("SCORE"), true);
+            forcible.put(refs.get("EQUIPMENT"), true);
+            forcible.put(refs.get("INVENTORY"), true);
+
+            forcible.put(refs.get("WHO"), false);
+            forcible.put(refs.get("TITLE"), false);
+            forcible.put(refs.get("HELP"), false);
+            forcible.put(refs.get("ROLL"), false);
+            forcible.put(refs.get("TIME"), false);
+            forcible.put(refs.get("QUIT"), false);
+            forcible.put(refs.get("REDIT"), false);
+            forcible.put(refs.get("IEDIT"), false);
+            forcible.put(refs.get("MEDIT"), false);
+            forcible.put(refs.get("CEDIT"), false);
+            forcible.put(refs.get("GOTO"), false);
+            forcible.put(refs.get("TRANSFER"), false);
+            forcible.put(refs.get("TELEPORT"), false);
+            forcible.put(refs.get("CREATE"), false);
+            forcible.put(refs.get("SPAWN"), false);
+            forcible.put(refs.get("PURGE"), false);
+            forcible.put(refs.get("SLAY"), false);
+            forcible.put(refs.get("FORCE"), false);
+
+
+            List<CommandForce> commandForces = new ArrayList<>();
+
+            forcible.forEach((commandReference, isForcible) -> {
+                CommandForce commandForce = new CommandForce(commandReference, isForcible);
+                commandForces.add(commandForce);
+            });
+
+            commandForceRepository.saveAll(commandForces);
         }
+
+
     }
 }

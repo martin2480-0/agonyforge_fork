@@ -50,8 +50,8 @@ public abstract class AbstractCommand implements Command {
 
         Long chId;
 
-        if (webSocketContext.getAttributes().containsKey("force")) {
-            chId = (Long) webSocketContext.getAttributes().get("force_id");
+        if (webSocketContext.getAttributes().containsKey("force_user")) {
+            chId = (Long) webSocketContext.getAttributes().get("force_user");
         }else {
             chId = (Long) webSocketContext.getAttributes().get(MUD_CHARACTER);
         }

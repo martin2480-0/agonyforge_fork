@@ -1,8 +1,6 @@
 package com.agonyforge.mud.demo.model.impl;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 import java.util.Objects;
 
@@ -14,6 +12,9 @@ public class CommandReference extends Persistent {
     private Integer priority;
     private String beanName;
     private String description;
+
+    @OneToOne(mappedBy = "command", cascade = CascadeType.ALL)
+    private CommandForce commandForce;
 
     public CommandReference() {
         // this method intentionally left blank
@@ -56,6 +57,14 @@ public class CommandReference extends Persistent {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public CommandForce getCommandForce() {
+        return commandForce;
+    }
+
+    public void setCommandForce(CommandForce commandForce) {
+        this.commandForce = commandForce;
     }
 
     @Override
