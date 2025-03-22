@@ -177,10 +177,11 @@ public class BanCommand extends AbstractCommand {
 
     public static Date getBanTime(Date date, String banTime) {
         int seconds = 0;
+
         if (banTime.contains("d")) {
-                String[] parts = banTime.split("d");
-                int days = Integer.parseInt(parts[0]);
-                seconds += (days * 86400);
+            String[] parts = banTime.split("d");
+            int days = Integer.parseInt(parts[0]);
+            seconds += (days * 86400);
         }
 
         if (banTime.contains("h")) {
