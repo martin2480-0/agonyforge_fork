@@ -5,6 +5,7 @@ import com.agonyforge.mud.core.web.model.Input;
 import com.agonyforge.mud.core.web.model.Output;
 import com.agonyforge.mud.core.web.model.WebSocketContext;
 import com.agonyforge.mud.demo.cli.RepositoryBundle;
+import com.agonyforge.mud.demo.model.impl.CommandForce;
 import com.agonyforge.mud.demo.model.impl.CommandReference;
 import com.agonyforge.mud.demo.model.impl.MudCharacter;
 import com.agonyforge.mud.demo.model.repository.CommandForceRepository;
@@ -18,25 +19,12 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 @Component
 public class ForceCommand extends AbstractCommand {
 
-    private final CommandForceRepository commandForceRepository;
     private final CommandRepository commandRepository;
-
-    public static final Set<String> SUPPORTED_COMMANDS = Set.of(
-        "down", "south", "up", "north", "east", "west",
-        "northeast", "ne", "northwest", "nw", "southwest", "sw", "southeast", "se",
-        "look", "emote", "whisper", "give", "get", "gossip",
-        "say", "shout", "drop", "wear", "tell", "remove"
-    );
-
-    public static final Set<String> MOVEMENT_COMMANDS = Set.of(
-        "down", "south", "up", "north", "east", "west",
-        "northeast", "ne", "northwest", "nw", "southwest", "sw", "southeast", "se"
-    );
+    private final CommandForceRepository commandForceRepository;
 
     @Autowired
     public ForceCommand(RepositoryBundle repositoryBundle, CommService commService, ApplicationContext applicationContext, CommandForceRepository commandForceRepository, CommandRepository commandRepository) {
@@ -80,7 +68,15 @@ public class ForceCommand extends AbstractCommand {
 
         CommandReference commandReference = commandReferenceOptional.get();
 
-        if (!commandReference.getCommandForce().isForcible()) {
+        Optional<CommandForce> commandForceOptional = commandForceRepository.findByCommand_NameIgnoreCase(commandName);
+        if (commandForceOptional.isEmpty()) {
+            output.append("[red]Can't find that command.");
+            return question;
+        }
+
+        CommandForce commandForce = commandForceOptional.get();
+
+        if (!commandForce.isForcible()) {
             output.append("[red]Can't force %s to do: %s", target.getCharacter().getName(), commandName);
             return question;
         }
@@ -105,7 +101,7 @@ public class ForceCommand extends AbstractCommand {
             forceCommandTokens.add(token.toUpperCase());
         }
 
-        command.execute(question, webSocketContext,List.of(forceCommandTokens.toArray(new String[0])) , new Input(fullCommand), new Output());
+        command.execute(question, webSocketContext, List.of(forceCommandTokens.toArray(new String[0])) , new Input(fullCommand), new Output());
 
         webSocketContext.getAttributes().remove("force_user");
 

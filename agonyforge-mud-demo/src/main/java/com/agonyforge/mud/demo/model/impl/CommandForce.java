@@ -2,6 +2,8 @@ package com.agonyforge.mud.demo.model.impl;
 
 import jakarta.persistence.*;
 
+import java.util.Objects;
+
 @Entity
 public class CommandForce {
 
@@ -47,5 +49,16 @@ public class CommandForce {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof CommandForce that)) return false;
+        return Objects.equals(getId(), that.getId()) && Objects.equals(command, that.command) && Objects.equals(forcible, that.forcible);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getId(), command, forcible);
     }
 }

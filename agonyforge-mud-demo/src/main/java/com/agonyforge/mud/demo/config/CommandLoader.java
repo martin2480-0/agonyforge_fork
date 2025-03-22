@@ -89,6 +89,7 @@ public class CommandLoader {
             refs.put("PURGE", new CommandReference(30, "PURGE", "purgeCommand", "Destroy an item."));
             refs.put("SLAY", new CommandReference(30, "SLAY", "slayCommand", "Slay a character."));
             refs.put("FORCE", new CommandReference(30, "FORCE", "forceCommand", "Force a character to do something."));
+            refs.put("BAN", new CommandReference(30, "BAN", "banCommand", "Bans player of character from the game."));
 
             LOGGER.info("Creating command references");
             commandRepository.saveAll(refs.values());
