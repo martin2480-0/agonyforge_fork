@@ -5,10 +5,8 @@ import com.agonyforge.mud.core.web.model.Input;
 import com.agonyforge.mud.core.web.model.Output;
 import com.agonyforge.mud.core.web.model.WebSocketContext;
 import com.agonyforge.mud.demo.cli.RepositoryBundle;
-import com.agonyforge.mud.demo.model.impl.CommandForce;
 import com.agonyforge.mud.demo.model.impl.CommandReference;
 import com.agonyforge.mud.demo.model.impl.MudCharacter;
-import com.agonyforge.mud.demo.model.repository.CommandForceRepository;
 import com.agonyforge.mud.demo.model.repository.CommandRepository;
 import com.agonyforge.mud.demo.service.CommService;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -24,12 +22,10 @@ import java.util.Optional;
 public class ForceCommand extends AbstractCommand {
 
     private final CommandRepository commandRepository;
-    private final CommandForceRepository commandForceRepository;
 
     @Autowired
-    public ForceCommand(RepositoryBundle repositoryBundle, CommService commService, ApplicationContext applicationContext, CommandForceRepository commandForceRepository, CommandRepository commandRepository) {
+    public ForceCommand(RepositoryBundle repositoryBundle, CommService commService, ApplicationContext applicationContext, CommandRepository commandRepository) {
         super(repositoryBundle, commService, applicationContext);
-        this.commandForceRepository = commandForceRepository;
         this.commandRepository = commandRepository;
     }
 
@@ -68,15 +64,7 @@ public class ForceCommand extends AbstractCommand {
 
         CommandReference commandReference = commandReferenceOptional.get();
 
-        Optional<CommandForce> commandForceOptional = commandForceRepository.findByCommand_NameIgnoreCase(commandName);
-        if (commandForceOptional.isEmpty()) {
-            output.append("[red]Can't find that command.");
-            return question;
-        }
-
-        CommandForce commandForce = commandForceOptional.get();
-
-        if (!commandForce.isForcible()) {
+        if (!commandReference.isCanBeForced()) {
             output.append("[red]Can't force %s to do: %s", target.getCharacter().getName(), commandName);
             return question;
         }

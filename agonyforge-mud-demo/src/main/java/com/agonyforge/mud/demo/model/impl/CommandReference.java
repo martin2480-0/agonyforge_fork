@@ -12,19 +12,18 @@ public class CommandReference extends Persistent {
     private Integer priority;
     private String beanName;
     private String description;
-
-    @OneToOne(mappedBy = "command", cascade = CascadeType.ALL)
-    private CommandForce commandForce;
+    private boolean canBeForced;
 
     public CommandReference() {
         // this method intentionally left blank
     }
 
-    public CommandReference(int priority, String name, String beanName, String description) {
+    public CommandReference(int priority, String name, String beanName, String description, boolean canBeForced) {
         this.name = name;
         this.priority = priority;
         this.beanName = beanName;
         this.description = description;
+        this.canBeForced = canBeForced;
     }
 
     public String getName() {
@@ -59,14 +58,6 @@ public class CommandReference extends Persistent {
         this.description = description;
     }
 
-    public CommandForce getCommandForce() {
-        return commandForce;
-    }
-
-    public void setCommandForce(CommandForce commandForce) {
-        this.commandForce = commandForce;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -78,5 +69,13 @@ public class CommandReference extends Persistent {
     @Override
     public int hashCode() {
         return Objects.hash(getName());
+    }
+
+    public boolean isCanBeForced() {
+        return canBeForced;
+    }
+
+    public void setCanBeForced(boolean canBeForced) {
+        this.canBeForced = canBeForced;
     }
 }

@@ -1,7 +1,6 @@
 package com.agonyforge.mud.demo.model.repository;
 
 import com.agonyforge.mud.demo.model.impl.BannedUser;
-import com.agonyforge.mud.demo.model.impl.CommandForce;
 import com.agonyforge.mud.demo.model.impl.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
