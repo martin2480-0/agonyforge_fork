@@ -20,7 +20,7 @@ public class BanListener {
         this.bannedUsersRepository = bannedUsersRepository;
     }
 
-    @Scheduled(cron = "0 0/1 * * * ?")
+    @Scheduled(cron = "0 * * * * ?")
     void checkBannedUsers(){
         List<BannedUser> bannedUsers = bannedUsersRepository.findNotPermanent();
 
@@ -33,7 +33,7 @@ public class BanListener {
                 usersToUnban.add(bannedUser);
             }
         });
-        
+
         bannedUsersRepository.deleteAll(usersToUnban);
     }
 }
