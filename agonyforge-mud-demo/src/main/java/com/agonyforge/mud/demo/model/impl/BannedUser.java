@@ -21,6 +21,7 @@ public class BannedUser {
 
     private boolean permanent;
 
+    @Column(columnDefinition = "TEXT")
     private String reason;
 
     @Temporal(TemporalType.TIMESTAMP)

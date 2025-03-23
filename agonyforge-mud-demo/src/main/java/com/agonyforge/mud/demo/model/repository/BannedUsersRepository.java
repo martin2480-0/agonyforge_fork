@@ -14,6 +14,6 @@ public interface BannedUsersRepository extends JpaRepository<BannedUser, Long> {
     Optional<BannedUser> findByBannedUser(User user);
     Optional<BannedUser> findByBannedUser_PrincipalName(String principal);
     List<BannedUser> findAllByOrderByBannedOnAsc();
-    List<BannedUser> findNotPermanent();
+    List<BannedUser> findByPermanentFalse();
 
 }

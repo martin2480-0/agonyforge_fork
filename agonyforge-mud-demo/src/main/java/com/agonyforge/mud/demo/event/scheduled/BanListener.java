@@ -22,7 +22,7 @@ public class BanListener {
 
     @Scheduled(cron = "0 * * * * ?")
     void checkBannedUsers(){
-        List<BannedUser> bannedUsers = bannedUsersRepository.findNotPermanent();
+        List<BannedUser> bannedUsers = bannedUsersRepository.findByPermanentFalse();
 
         List<BannedUser> usersToUnban = new ArrayList<>();
 
