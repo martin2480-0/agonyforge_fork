@@ -8,6 +8,7 @@ import com.agonyforge.mud.core.web.model.WebSocketContext;
 import com.agonyforge.mud.demo.cli.RepositoryBundle;
 import com.agonyforge.mud.demo.model.impl.CharacterComponent;
 import com.agonyforge.mud.demo.model.impl.MudCharacter;
+import com.agonyforge.mud.demo.model.repository.BannedUsersRepository;
 import com.agonyforge.mud.demo.model.repository.MudCharacterRepository;
 import com.agonyforge.mud.demo.model.repository.MudItemRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,6 +59,9 @@ public class CharacterMenuQuestionTest {
     @Mock
     private WebSocketContext webSocketContext;
 
+    @Mock
+    BannedUsersRepository bannedUsersRepository;
+
     private final Random random = new Random();
 
     @BeforeEach
@@ -75,7 +79,8 @@ public class CharacterMenuQuestionTest {
 
         CharacterMenuQuestion uut = new CharacterMenuQuestion(
             applicationContext,
-            repositoryBundle);
+            repositoryBundle,
+            bannedUsersRepository);
         Output result = uut.prompt(webSocketContext);
         Optional<String> itemOptional = result.getOutput()
                 .stream()
@@ -101,7 +106,8 @@ public class CharacterMenuQuestionTest {
 
         CharacterMenuQuestion uut = new CharacterMenuQuestion(
             applicationContext,
-            repositoryBundle);
+            repositoryBundle,
+            bannedUsersRepository);
         Output result = uut.prompt(webSocketContext);
         Optional<String> newCharacterLineOptional = result.getOutput()
             .stream()
@@ -128,7 +134,8 @@ public class CharacterMenuQuestionTest {
 
         CharacterMenuQuestion uut = new CharacterMenuQuestion(
             applicationContext,
-            repositoryBundle);
+            repositoryBundle,
+            bannedUsersRepository);
         uut.prompt(webSocketContext);
         Output result = uut.prompt(webSocketContext);
 
@@ -144,7 +151,8 @@ public class CharacterMenuQuestionTest {
     void testAnswerEmpty() {
         CharacterMenuQuestion uut = new CharacterMenuQuestion(
             applicationContext,
-            repositoryBundle);
+            repositoryBundle,
+            bannedUsersRepository);
 
         when(webSocketContext.getPrincipal()).thenReturn(principal);
         when(applicationContext.getBean(eq("characterMenuQuestion"), eq(Question.class))).thenReturn(uut);
@@ -162,7 +170,8 @@ public class CharacterMenuQuestionTest {
 
         CharacterMenuQuestion uut = new CharacterMenuQuestion(
             applicationContext,
-            repositoryBundle);
+            repositoryBundle,
+            bannedUsersRepository);
         Response result = uut.answer(webSocketContext, new Input("n"));
 
         assertEquals(question, result.getNext());
@@ -188,7 +197,9 @@ public class CharacterMenuQuestionTest {
 
         CharacterMenuQuestion uut = new CharacterMenuQuestion(
             applicationContext,
-            repositoryBundle);
+            repositoryBundle,
+            bannedUsersRepository
+        );
 
         Response result = uut.answer(webSocketContext, new Input("1"));
 

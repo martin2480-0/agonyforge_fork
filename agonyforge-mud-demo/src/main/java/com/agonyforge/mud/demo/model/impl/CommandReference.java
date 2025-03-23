@@ -13,17 +13,19 @@ public class CommandReference extends Persistent {
     private String beanName;
     private String description;
     private boolean canBeForced;
+    private boolean canExecuteWhileFrozen;
 
     public CommandReference() {
         // this method intentionally left blank
     }
 
-    public CommandReference(int priority, String name, String beanName, String description, boolean canBeForced) {
+    public CommandReference(int priority, String name, String beanName, String description, boolean canBeForced, boolean canExecuteWhileFrozen) {
         this.name = name;
         this.priority = priority;
         this.beanName = beanName;
         this.description = description;
         this.canBeForced = canBeForced;
+        this.canExecuteWhileFrozen = canExecuteWhileFrozen;
     }
 
     public String getName() {
@@ -77,5 +79,13 @@ public class CommandReference extends Persistent {
 
     public void setCanBeForced(boolean canBeForced) {
         this.canBeForced = canBeForced;
+    }
+
+    public boolean isCanExecuteWhileFrozen() {
+        return canExecuteWhileFrozen;
+    }
+
+    public void setCanExecuteWhileFrozen(boolean canExecuteWhileFrozen) {
+        this.canExecuteWhileFrozen = canExecuteWhileFrozen;
     }
 }

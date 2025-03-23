@@ -12,37 +12,111 @@ import com.agonyforge.mud.core.cli.menu.impl.MenuPane;
 import com.agonyforge.mud.core.cli.menu.impl.MenuPrompt;
 import com.agonyforge.mud.core.cli.menu.impl.MenuTitle;
 import com.agonyforge.mud.demo.cli.question.BaseQuestion;
+import com.agonyforge.mud.demo.model.impl.BannedUser;
+import com.agonyforge.mud.demo.model.repository.BannedUsersRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 import java.security.Principal;
+import java.util.Date;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static com.agonyforge.mud.core.config.SessionConfiguration.MUD_CHARACTER;
 
 @Component
 public class CharacterMenuQuestion extends BaseQuestion {
     private final MenuPane menuPane = new MenuPane();
+    private final BannedUsersRepository bannedUsersRepository;
 
     @Autowired
     public CharacterMenuQuestion(ApplicationContext applicationContext,
-                                 RepositoryBundle repositoryBundle) {
+                                 RepositoryBundle repositoryBundle, BannedUsersRepository bannedUsersRepository) {
         super(applicationContext, repositoryBundle);
+        this.bannedUsersRepository = bannedUsersRepository;
 
-        menuPane.setTitle(new MenuTitle("Your Characters"));
         menuPane.setPrompt(new MenuPrompt());
     }
 
     @Override
     public Output prompt(WebSocketContext wsContext) {
-        populateMenuItems(wsContext.getPrincipal());
+        Principal principal = wsContext.getPrincipal();
 
+        Optional<BannedUser> bannedUserOptional = bannedUsersRepository.findByBannedUser_PrincipalName(principal.getName());
+
+        if (bannedUserOptional.isPresent()) {
+
+            BannedUser bannedUser = bannedUserOptional.get();
+
+            String reason = bannedUser.getReason();
+
+            String banType = bannedUser.isPermanent() ? "permanent" : "temporary";
+
+            if (reason.isBlank()) {
+                reason = "Not given";
+            }
+
+            menuPane.setTitle(new MenuTitle("You have been banned"));
+
+            menuPane.getItems().clear();
+
+            menuPane.getItems().add(new MenuItem("", String.format("Reason: %s",reason)));
+            menuPane.getItems().add(new MenuItem("", String.format("Type: %s", banType)));
+            if (!bannedUser.isPermanent()) {
+                String startDate = bannedUser.getBannedOn().toString();
+
+                String bannedToDate = bannedUser.getBannedToDate().toString();
+
+                String timeRemaining = getTimeRemaining(bannedUser.getBannedToDate());
+
+                menuPane.getItems().add(new MenuItem("", String.format("Start date: %s",startDate)));
+                menuPane.getItems().add(new MenuItem("", String.format("End date: %s", bannedToDate)));
+                menuPane.getItems().add(new MenuItem("", timeRemaining));
+            }
+            return menuPane.render(Color.WHITE, Color.BLACK);
+        }
+
+
+        populateMenuItems(principal);
+
+        menuPane.setTitle(new MenuTitle("Your Characters"));
         return menuPane.render(Color.WHITE, Color.BLACK);
     }
 
+    private static String getTimeRemaining(Date futureDate){
+        Date now = new Date();
+
+        long differenceInMillis = futureDate.getTime() - now.getTime();
+
+        long days = TimeUnit.MILLISECONDS.toDays(differenceInMillis);
+        long hours = TimeUnit.MILLISECONDS.toHours(differenceInMillis) % 24;
+        long minutes = TimeUnit.MILLISECONDS.toMinutes(differenceInMillis) % 60;
+
+        StringBuilder timeRemaining = new StringBuilder();
+
+        if (days > 0) {
+            timeRemaining.append(days).append(" days ");
+        }
+        if (hours > 0) {
+            timeRemaining.append(hours).append(" hours ");
+        }
+        if (minutes > 0) {
+            timeRemaining.append(minutes).append(" minutes");
+        }
+
+        return "Time remaining: " + timeRemaining.toString().trim();
+    }
+
+
     @Override
     public Response answer(WebSocketContext wsContext, Input input) {
+
+        if (bannedUsersRepository.findByBannedUser_PrincipalName(wsContext.getPrincipal().getName()).isPresent()) {
+            Question next = getQuestion("characterMenuQuestion");
+            return new Response(next, new Output());
+        }
+
         populateMenuItems(wsContext.getPrincipal());
 
         String nextQuestion = "characterMenuQuestion";
