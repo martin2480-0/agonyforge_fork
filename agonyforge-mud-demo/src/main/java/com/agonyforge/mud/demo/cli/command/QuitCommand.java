@@ -30,16 +30,19 @@ public class QuitCommand extends AbstractCommand {
         Question characterMenuQuestion = getApplicationContext().getBean("characterMenuQuestion", Question.class);
         MudCharacter ch = getCurrentCharacter(webSocketContext, output);
 
-        output.append("[white]Goodbye!");
+        if (!webSocketContext.getAttributes().containsKey("force_user")) {
+            output.append("[white]Goodbye!");
+        }
 
         // TODO the following duplicates code in CharacterJanitor and could be consolidated
         ch.setLocation(null);
         getRepositoryBundle().getCharacterRepository().save(ch);
 
-        LOGGER.info("{} has left the game.", ch.getCharacter().getName());
-
-        getCommService().sendToAll(webSocketContext,
-            new Output("[yellow]%s has left the game!", ch.getCharacter().getName()), ch);
+        if (!webSocketContext.getAttributes().containsKey("force_user")) {
+            LOGGER.info("{} has left the game.", ch.getCharacter().getName());
+            getCommService().sendToAll(webSocketContext,
+                new Output("[yellow]%s has left the game!", ch.getCharacter().getName()), ch);
+        }
 
         return characterMenuQuestion;
     }

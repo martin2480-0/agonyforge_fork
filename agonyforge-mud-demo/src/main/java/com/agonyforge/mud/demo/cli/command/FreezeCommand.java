@@ -39,15 +39,15 @@ public class FreezeCommand extends AbstractCommand{
 
         MudCharacter target = targetOptional.get();
 
-        boolean currentState = false; // here get the current state
+        boolean newState = !target.isFrozen();
 
-        // here set the frozen/unfrozen state to the target
+        target.setFrozen(newState);
 
-        if (currentState){
-            output.append("[yellow]%s has been frozen", target.getCharacter().getName());
+        if (newState){
+            output.append("[default]%s has been frozen.", target.getCharacter().getName());
             getCommService().sendTo(target, new Output("[yellow]You have been frozen.", ch.getCharacter().getName()));
         }else {
-            output.append("[yellow]%s has been unfrozen", target.getCharacter().getName());
+            output.append("[default]%s has been unfrozen.", target.getCharacter().getName());
             getCommService().sendTo(target, new Output("[yellow]You have been unfrozen.", ch.getCharacter().getName()));
         }
 

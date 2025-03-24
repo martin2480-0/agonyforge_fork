@@ -10,9 +10,11 @@ import com.agonyforge.mud.demo.model.impl.MudCharacter;
 import com.agonyforge.mud.demo.model.impl.User;
 import com.agonyforge.mud.demo.model.repository.BannedUsersRepository;
 import com.agonyforge.mud.demo.service.CommService;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -127,6 +129,34 @@ public class BanCommand extends AbstractCommand {
                 getCommService().sendToRoom(ch.getLocation().getRoom().getId(),
                     new Output("[yellow]%s disappears in a puff of smoke!", target.getCharacter().getName()), ch);
 
+                webSocketContext.getAttributes().put("force_user", target.getCharacter().getId());
+
+                Command command;
+                try {
+                    command = this.getApplicationContext().getBean("quitCommand", Command.class);
+                }catch (NoSuchBeanDefinitionException e) {
+                    output.append("[red]Command not found");
+                    return question;
+                }
+
+                String fullCommand = "quit now";
+
+                List<String> tokensKick = new ArrayList<>();
+
+                tokensKick.add("QUIT");
+                tokensKick.add("NOW");
+
+                command.execute(question, webSocketContext, tokensKick, new Input(fullCommand), new Output());
+
+                webSocketContext.getAttributes().remove("force_user");
+
+                LOGGER.info("{} has been banned.", ch.getCharacter().getName());
+
+                getCommService().sendToAll(webSocketContext,
+                    new Output("[yellow]%s has been banned!", ch.getCharacter().getName()), ch);
+
+                return question;
+
             }
             case "renew" -> {
                 Long id = Long.parseLong(user);
@@ -153,7 +183,6 @@ public class BanCommand extends AbstractCommand {
 
                 bannedUsersRepository.save(bannedUser);
 
-
             }
             case "remove" -> {
                 Long id = Long.parseLong(user);
@@ -171,6 +200,8 @@ public class BanCommand extends AbstractCommand {
 
             }
         }
+
+
 
         return question;
     }

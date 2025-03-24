@@ -69,6 +69,10 @@ public class ForceCommand extends AbstractCommand {
             return question;
         }
 
+        if (target.isFrozen() && !commandReference.isCanExecuteWhileFrozen()) {
+            output.append("[red]Can't execute this command, %s is frozen.", target.getCharacter().getName());
+        }
+
         output.append("[yellow]You forced %s to: %s",target.getCharacter().getName(), fullCommand);
         getCommService().sendTo(target, new Output("[yellow]%s forced you to: %s", ch.getCharacter().getName(), fullCommand));
 
@@ -83,11 +87,14 @@ public class ForceCommand extends AbstractCommand {
             return question;
         }
 
+
+
         ArrayList<String> forceCommandTokens = new ArrayList<>();
 
         for (String token : fullCommand.split(" ")) {
             forceCommandTokens.add(token.toUpperCase());
         }
+
 
         command.execute(question, webSocketContext, List.of(forceCommandTokens.toArray(new String[0])) , new Input(fullCommand), new Output());
 

@@ -13,6 +13,8 @@ public class MudCharacter extends AbstractMudObject {
     @ManyToOne
     private MudCharacterTemplate template;
 
+    private boolean frozen = false;
+
     public Long getId() {
         return id;
     }
@@ -45,5 +47,13 @@ public class MudCharacter extends AbstractMudObject {
     @Override
     public int hashCode() {
         return Objects.hash(getId());
+    }
+
+    public boolean isFrozen() {
+        return frozen;
+    }
+
+    public void setFrozen(boolean frozen) {
+        this.frozen = frozen;
     }
 }

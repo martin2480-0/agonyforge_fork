@@ -81,11 +81,18 @@ public class CommandQuestion extends BaseQuestion {
             MudCharacter ch = getCharacter(webSocketContext, output).orElseThrow();
 
             if (ch.getPlayer() != null && (ch.getPlayer().getRoles().stream().anyMatch(role -> role.getCommands().contains(ref)) || ch.getPlayer().getRoles().stream().anyMatch(Role::isImplementor))) {
+                if (ch.isFrozen() && !ref.isCanExecuteWhileFrozen()){
+                    output.append("[red]Can't execute this command, %s is frozen.", ch.getCharacter().getName());
+
+                    LOGGER.warn("Request by {} ({}) to use command {} denied due to {} being frozen.", ch.getPlayer().getUsername(), ch.getCharacter().getName(), ref.getName(), ch.getCharacter().getName());
+
+                    return new Response(this, output);
+                }
                 Question next = command.execute(this, webSocketContext, tokens, input, output);
                 return new Response(next, output);
             }
 
-            LOGGER.warn("Request by {} ({}) to use command {} denied due to missing role", ch.getPlayer().getUsername(), ch.getCharacter().getName(), ref.getName());
+            LOGGER.warn("Request by {} ({}) to use command {} denied due to missing role.", ch.getPlayer().getUsername(), ch.getCharacter().getName(), ref.getName());
         } catch (CommandException e) {
             LOGGER.warn("Command failed: {}", e.getMessage());
             output.append("[red]Oops! Something went wrong... the error has been reported!");

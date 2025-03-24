@@ -87,7 +87,9 @@ public class CommandLoader {
             refs.put("PURGE", new CommandReference(30, "PURGE", "purgeCommand", "Destroy an item.", false, false));
             refs.put("SLAY", new CommandReference(30, "SLAY", "slayCommand", "Slay a character.", false, false));
             refs.put("FORCE", new CommandReference(30, "FORCE", "forceCommand", "Force a character to do something.", false, false));
-            refs.put("BAN", new CommandReference(30, "FREEZE", "freezeCommand", "Freezes character.", false, false));
+            refs.put("FREEZE", new CommandReference(30, "FREEZE", "freezeCommand", "Freezes character.", false, false));
+            refs.put("BAN", new CommandReference(30, "BAN", "banCommand", "Bans player of the character.", false, false));
+            refs.put("KICK", new CommandReference(30, "KICK", "kickCommand", "Kicks character from the game.", false, false));
 
 
             LOGGER.info("Creating command references");
@@ -106,7 +108,7 @@ public class CommandLoader {
                 "EMOTE", "GOSSIP", "SAY", "SHOUT", "TELL", "WHISPER", "TIME",
                 "NORTH", "EAST", "SOUTH", "WEST", "UP", "DOWN",
                 "NORTHEAST", "NORTHWEST", "SOUTHEAST", "SOUTHWEST",
-                "NE", "NW", "SE", "SW"
+                "NE", "NW", "SE", "SW", "QUIT"
             };
 
             player.setName("Player");
