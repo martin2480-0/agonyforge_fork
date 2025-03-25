@@ -9,6 +9,7 @@ import com.agonyforge.mud.demo.model.impl.BannedUser;
 import com.agonyforge.mud.demo.model.impl.MudCharacter;
 import com.agonyforge.mud.demo.model.impl.User;
 import com.agonyforge.mud.demo.model.repository.BannedUsersRepository;
+import com.agonyforge.mud.demo.model.repository.UserRepository;
 import com.agonyforge.mud.demo.service.CommService;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
@@ -25,11 +26,13 @@ import java.util.stream.Stream;
 @Component
 public class BanCommand extends AbstractCommand {
 
+    private final UserRepository userRepository;
     BannedUsersRepository bannedUsersRepository;
 
-    public BanCommand(RepositoryBundle repositoryBundle, CommService commService, ApplicationContext applicationContext, BannedUsersRepository bannedUsersRepository) {
+    public BanCommand(RepositoryBundle repositoryBundle, CommService commService, ApplicationContext applicationContext, BannedUsersRepository bannedUsersRepository, UserRepository userRepository) {
         super(repositoryBundle, commService, applicationContext);
         this.bannedUsersRepository = bannedUsersRepository;
+        this.userRepository = userRepository;
     }
 
     public static Date getBanTime(Date date, String banTime) {
@@ -57,7 +60,7 @@ public class BanCommand extends AbstractCommand {
 
         return new Date(date.getTime() + (seconds * 1000L));
     }
-    
+
     // BAN add <user> PERM <důvod>
     // BAN add <user> TEMP <doba> <důvod>
     // BAN renew <ban_id> <doba>
@@ -105,7 +108,7 @@ public class BanCommand extends AbstractCommand {
 
                 bannedUsers.forEach(bannedUser -> {
                     output.append(String.format("[yellow]%-12s[white]: [red]%s\n",
-                        bannedUser.getBannedUser().getGivenName(),
+                        bannedUser.getId(),
                         bannedUser.isPermanent() ? "Permanent Ban" : "Temporary Ban"));
 
                     if (!bannedUser.isPermanent()) {
@@ -134,10 +137,10 @@ public class BanCommand extends AbstractCommand {
             }
 
 
-            String user = tokens.get(2);
+            String userIdentification = tokens.get(2);
 
             if (banAction.equalsIgnoreCase("add")) {
-                Optional<MudCharacter> targetOptional = findWorldCharacter(ch, user);
+                Optional<MudCharacter> targetOptional = findWorldCharacter(ch, userIdentification);
 
                 if (targetOptional.isEmpty() || targetOptional.get().getPlayer() == null) {
                     output.append("[red]Can't find that player.");
@@ -147,19 +150,19 @@ public class BanCommand extends AbstractCommand {
                 MudCharacter target = targetOptional.get();
 
                 boolean perm = false;
-                if (tokens.size() < 5) {
-                    output.append("[red]You must specify a ban duration.");
-                    return question;
-                }
-
                 String type = tokens.get(3);
                 if ("perm".equalsIgnoreCase(type)) {
                     perm = true;
                 }
+                if (tokens.size() < 5 && !perm) {
+                    output.append("[red]You must specify a ban duration.");
+                    return question;
+                }
+
                 Date date;
                 String reason;
                 if (perm) {
-                    date = new Date(Long.MAX_VALUE);
+                    date = new Date();
                     reason = String.join(" ", tokens.subList(4, tokens.size()));
                 } else {
                     String duration = tokens.get(4);
@@ -167,7 +170,18 @@ public class BanCommand extends AbstractCommand {
                     reason = String.join(" ", tokens.subList(5, tokens.size()));
                 }
 
-                BannedUser bannedUserInstance = new BannedUser(new User(), perm, date, reason);
+                String principal = target.getCreatedBy();
+
+                Optional<User> optionalUser = userRepository.findUserByPrincipalName(principal);
+
+                if (optionalUser.isEmpty()) {
+                    output.append("[red]User not found.");
+                    return question;
+                }
+
+                User user = optionalUser.get();
+
+                BannedUser bannedUserInstance = new BannedUser(user, perm, date, reason);
 
                 bannedUsersRepository.save(bannedUserInstance);
 
@@ -202,7 +216,7 @@ public class BanCommand extends AbstractCommand {
 
                 return question;
             } else if (banAction.equalsIgnoreCase("renew")) {
-                Long id = Long.parseLong(user);
+                Long id = Long.parseLong(userIdentification);
 
                 Optional<BannedUser> bannedUserOptional = bannedUsersRepository.findById(id);
 
@@ -226,7 +240,7 @@ public class BanCommand extends AbstractCommand {
 
                 bannedUsersRepository.save(bannedUser);
             } else if (banAction.equalsIgnoreCase("remove")) {
-                Long id = Long.parseLong(user);
+                Long id = Long.parseLong(userIdentification);
 
                 Optional<BannedUser> bannedUserOptional = bannedUsersRepository.findById(id);
 
