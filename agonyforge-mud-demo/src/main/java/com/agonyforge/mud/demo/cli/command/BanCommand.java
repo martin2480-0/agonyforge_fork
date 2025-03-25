@@ -18,6 +18,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 @Component
 public class BanCommand extends AbstractCommand {
@@ -29,78 +32,120 @@ public class BanCommand extends AbstractCommand {
         this.bannedUsersRepository = bannedUsersRepository;
     }
 
+    public static Date getBanTime(Date date, String banTime) {
+        int seconds = 0;
+
+        Pattern pattern = Pattern.compile("(\\d+)([dhm])", Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(banTime);
+
+        while (matcher.find()) {
+            int value = Integer.parseInt(matcher.group(1));
+            String unit = matcher.group(2).toLowerCase();
+
+            switch (unit) {
+                case "d":
+                    seconds += value * 86400;
+                    break;
+                case "h":
+                    seconds += value * 3600;
+                    break;
+                case "m":
+                    seconds += value * 60;
+                    break;
+            }
+        }
+
+        return new Date(date.getTime() + (seconds * 1000L));
+    }
+    
     // BAN add <user> PERM <důvod>
     // BAN add <user> TEMP <doba> <důvod>
     // BAN renew <ban_id> <doba>
     // BAN remove <ban_id>
     @Override
     public Question execute(Question question, WebSocketContext webSocketContext, List<String> tokens, Input input, Output output) {
-        MudCharacter ch = getCurrentCharacter(webSocketContext, output);
+        try {
+
+            MudCharacter ch = getCurrentCharacter(webSocketContext, output);
 
 
-        if (tokens.size() < 2) {
-            output.append("[default]What ban action would you like to take?");
-            return question;
-        }
+            if (tokens.size() < 2) {
+                output.append("[default]What ban action would you like to take?");
+                return question;
+            }
 
-        String banAction = tokens.get(1);
+            String banAction = tokens.get(1);
 
-        if (tokens.size() < 3 && !"list".equalsIgnoreCase(banAction)) {
-            output.append("[red]Unknown ban action.");
-            return question;
-        }
+            if (Stream.of("add", "renew", "remove", "list").noneMatch(banAction::equalsIgnoreCase)) {
+                output.append("[red]Unknown ban action.");
+                return question;
+            }
 
-        if ("list".equalsIgnoreCase(banAction)) {
 
-            List<BannedUser> bannedUsers = bannedUsersRepository.findAllByOrderByBannedOnAsc();
-
-            output
-                .append("[white]Banned Users:")
-                .append("[default]Banned Users are listed from last banned to first.");
-
-        bannedUsers.forEach(bannedUser -> {
-                output.append(String.format("[yellow]%-12s[white]: [red]%s\n",
-                    bannedUser.getBannedUser().getGivenName(),
-                    bannedUser.isPermanent() ? "Permanent Ban" : "Temporary Ban"));
-
-                if (!bannedUser.isPermanent()) {
-                    output.append(String.format("[yellow]Banned Until[white]: [red]%s\n", bannedUser.getBannedToDate()));
+            if (tokens.size() < 3 && !"list".equalsIgnoreCase(banAction)) {
+                if (banAction.equalsIgnoreCase("add")) {
+                    output.append("[default]Who would you like to ban?");
+                    return question;
+                } else if (banAction.equalsIgnoreCase("remove")) {
+                    output.append("[default]Who would you like to unban?");
+                    return question;
+                } else if (banAction.equalsIgnoreCase("renew")) {
+                    output.append("[default]Whose ban would you like renew?");
+                    return question;
                 }
-                String reason = bannedUser.getReason();
+            }
 
-                if (reason == null || reason.isEmpty()) {
-                    reason = "No reason provided";
+            if ("list".equalsIgnoreCase(banAction)) {
+
+                List<BannedUser> bannedUsers = bannedUsersRepository.findAllByOrderByBannedOnAsc();
+
+                output
+                    .append("[white]Banned Users:")
+                    .append("[default]Banned Users are listed from last banned to first.");
+
+                bannedUsers.forEach(bannedUser -> {
+                    output.append(String.format("[yellow]%-12s[white]: [red]%s\n",
+                        bannedUser.getBannedUser().getGivenName(),
+                        bannedUser.isPermanent() ? "Permanent Ban" : "Temporary Ban"));
+
+                    if (!bannedUser.isPermanent()) {
+                        output.append(String.format("[yellow]Banned Until[white]: [red]%s\n", bannedUser.getBannedToDate()));
+                    }
+                    String reason = bannedUser.getReason();
+
+                    if (reason == null || reason.isEmpty()) {
+                        reason = "No reason provided";
+                    }
+                    output.append(String.format("[yellow]Reason[white]: [red]%s\n", reason));
+                    output.append(String.format("[yellow]Banned On[white]: [red]%s\n", bannedUser.getBannedOn()));
+                });
+
+
+                return question;
+            }
+
+            if (tokens.size() < 3 && "add".equalsIgnoreCase(banAction)) {
+                output.append("[red]You must specify a ban type.");
+                return question;
+            }
+
+            if (tokens.size() < 4 && "renew".equalsIgnoreCase(banAction)) {
+                output.append("[red]You must specify a ban renewal duration.");
+            }
+
+
+            String user = tokens.get(2);
+
+            if (banAction.equalsIgnoreCase("add")) {
+                Optional<MudCharacter> targetOptional = findWorldCharacter(ch, user);
+
+                if (targetOptional.isEmpty() || targetOptional.get().getPlayer() == null) {
+                    output.append("[red]Can't find that player.");
+                    return question;
                 }
-                output.append(String.format("[yellow]Reason[white]: [red]%s\n", reason));
-                output.append(String.format("[yellow]Banned On[white]: [red]%s\n", bannedUser.getBannedOn()));
-            });
 
+                MudCharacter target = targetOptional.get();
 
-            return question;
-        }
-
-        if (tokens.size() < 4 && "add".equalsIgnoreCase(banAction)) {
-            output.append("[red]You must specify a ban type.");
-            return question;
-        }
-
-        if (tokens.size() < 4 && "renew".equalsIgnoreCase(banAction)) {
-            output.append("[red]You must specify a ban renewal duration.");
-        }
-
-        Optional<MudCharacter> targetOptional = findWorldCharacter(ch, tokens.get(1));
-
-        if (targetOptional.isEmpty() || targetOptional.get().getPlayer() == null) {
-            output.append("[red]Can't find that player.");
-            return question;
-        }
-
-        MudCharacter target = targetOptional.get();
-
-        String user = tokens.get(2);
-
-        switch (banAction) {
-            case "add" -> {
                 boolean perm = false;
                 if (tokens.size() < 5) {
                     output.append("[red]You must specify a ban duration.");
@@ -113,10 +158,10 @@ public class BanCommand extends AbstractCommand {
                 }
                 Date date;
                 String reason;
-                if (perm){
+                if (perm) {
                     date = new Date(Long.MAX_VALUE);
                     reason = String.join(" ", tokens.subList(4, tokens.size()));
-                }else {
+                } else {
                     String duration = tokens.get(4);
                     date = getBanTime(new Date(), duration);
                     reason = String.join(" ", tokens.subList(5, tokens.size()));
@@ -134,7 +179,7 @@ public class BanCommand extends AbstractCommand {
                 Command command;
                 try {
                     command = this.getApplicationContext().getBean("quitCommand", Command.class);
-                }catch (NoSuchBeanDefinitionException e) {
+                } catch (NoSuchBeanDefinitionException e) {
                     output.append("[red]Command not found");
                     return question;
                 }
@@ -156,9 +201,7 @@ public class BanCommand extends AbstractCommand {
                     new Output("[yellow]%s has been banned!", ch.getCharacter().getName()), ch);
 
                 return question;
-
-            }
-            case "renew" -> {
+            } else if (banAction.equalsIgnoreCase("renew")) {
                 Long id = Long.parseLong(user);
 
                 Optional<BannedUser> bannedUserOptional = bannedUsersRepository.findById(id);
@@ -182,9 +225,7 @@ public class BanCommand extends AbstractCommand {
                 bannedUser.setBannedToDate(newBanEnd);
 
                 bannedUsersRepository.save(bannedUser);
-
-            }
-            case "remove" -> {
+            } else if (banAction.equalsIgnoreCase("remove")) {
                 Long id = Long.parseLong(user);
 
                 Optional<BannedUser> bannedUserOptional = bannedUsersRepository.findById(id);
@@ -197,38 +238,13 @@ public class BanCommand extends AbstractCommand {
                 BannedUser bannedUser = bannedUserOptional.get();
 
                 bannedUsersRepository.delete(bannedUser);
-
             }
+
+
+            return question;
+        } catch (Exception e) {
+            LOGGER.info(e.getMessage());
         }
-
-
-
         return question;
-    }
-
-    public static Date getBanTime(Date date, String banTime) {
-        int seconds = 0;
-
-        if (banTime.contains("d")) {
-            String[] parts = banTime.split("d");
-            int days = Integer.parseInt(parts[0]);
-            seconds += (days * 86400);
-        }
-
-        if (banTime.contains("h")) {
-            String[] parts = banTime.split("h");
-            int hours = Integer.parseInt(parts[0]);
-            seconds += (hours * 3600);
-        }
-
-        if (banTime.contains("m")) {
-            String[] parts = banTime.split("m");
-            int minutes = Integer.parseInt(parts[0]);
-            seconds += (minutes * 60);
-        }
-
-        long futureTimeMillis = date.getTime() + (seconds * 1000L);
-
-        return new Date(futureTimeMillis);
     }
 }
