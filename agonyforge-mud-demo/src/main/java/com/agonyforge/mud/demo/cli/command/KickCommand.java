@@ -20,9 +20,7 @@ import java.util.Optional;
 @Component
 public class KickCommand extends AbstractCommand {
 
-    CommandRepository commandRepository;
-
-    public KickCommand(RepositoryBundle repositoryBundle, CommService commService, ApplicationContext applicationContext, CommandRepository commandRepository) {
+    public KickCommand(RepositoryBundle repositoryBundle, CommService commService, ApplicationContext applicationContext) {
         super(repositoryBundle, commService, applicationContext);
     }
 
@@ -44,26 +42,9 @@ public class KickCommand extends AbstractCommand {
 
         MudCharacter target = targetOptional.get();
 
-        webSocketContext.getAttributes().put("force_user", target.getCharacter().getId());
+        String principal = target.getCreatedBy();
 
-        Command command;
-        try {
-            command = this.getApplicationContext().getBean("quitCommand", Command.class);
-        }catch (NoSuchBeanDefinitionException e) {
-            output.append("[red]Command not found");
-            return question;
-        }
-
-        String fullCommand = "quit now";
-
-        List<String> tokensKick = new ArrayList<>();
-
-        tokensKick.add("QUIT");
-        tokensKick.add("NOW");
-
-        command.execute(question, webSocketContext, tokensKick, new Input(fullCommand), new Output());
-
-        webSocketContext.getAttributes().remove("force_user");
+        getCommService().reloadUser(principal);
 
         LOGGER.info("{} has been kicked.", ch.getCharacter().getName());
 

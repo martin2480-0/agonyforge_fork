@@ -40,6 +40,10 @@ public class SlayCommand extends AbstractCommand {
         MudCharacter target = targetOptional.get();
         getRepositoryBundle().getCharacterRepository().delete(target);
 
+        String principal = target.getCreatedBy();
+
+        getCommService().reloadUser(principal);
+
         output.append("[yellow]You snap your fingers, and %s disappears!", target.getCharacter().getName());
         getCommService().sendToRoom(ch.getLocation().getRoom().getId(),
             new Output("[yellow]%s snaps %s fingers, and %s disappears!",

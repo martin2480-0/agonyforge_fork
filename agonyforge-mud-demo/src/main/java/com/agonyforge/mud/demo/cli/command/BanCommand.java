@@ -27,7 +27,7 @@ import java.util.stream.Stream;
 public class BanCommand extends AbstractCommand {
 
     private final UserRepository userRepository;
-    BannedUsersRepository bannedUsersRepository;
+    private final BannedUsersRepository bannedUsersRepository;
 
     public BanCommand(RepositoryBundle repositoryBundle, CommService commService, ApplicationContext applicationContext, BannedUsersRepository bannedUsersRepository, UserRepository userRepository) {
         super(repositoryBundle, commService, applicationContext);
@@ -188,26 +188,7 @@ public class BanCommand extends AbstractCommand {
                 getCommService().sendToRoom(ch.getLocation().getRoom().getId(),
                     new Output("[yellow]%s disappears in a puff of smoke!", target.getCharacter().getName()), ch);
 
-                webSocketContext.getAttributes().put("force_user", target.getCharacter().getId());
-
-                Command command;
-                try {
-                    command = this.getApplicationContext().getBean("quitCommand", Command.class);
-                } catch (NoSuchBeanDefinitionException e) {
-                    output.append("[red]Command not found");
-                    return question;
-                }
-
-                String fullCommand = "quit now";
-
-                List<String> tokensKick = new ArrayList<>();
-
-                tokensKick.add("QUIT");
-                tokensKick.add("NOW");
-
-                command.execute(question, webSocketContext, tokensKick, new Input(fullCommand), new Output());
-
-                webSocketContext.getAttributes().remove("force_user");
+                getCommService().reloadUser(principal);
 
                 LOGGER.info("{} has been banned.", ch.getCharacter().getName());
 

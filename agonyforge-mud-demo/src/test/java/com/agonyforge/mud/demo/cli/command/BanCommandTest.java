@@ -6,6 +6,7 @@ import com.agonyforge.mud.core.web.model.Output;
 import com.agonyforge.mud.core.web.model.WebSocketContext;
 import com.agonyforge.mud.demo.cli.RepositoryBundle;
 import com.agonyforge.mud.demo.model.repository.BannedUsersRepository;
+import com.agonyforge.mud.demo.model.repository.UserRepository;
 import com.agonyforge.mud.demo.service.CommService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -44,6 +45,9 @@ public class BanCommandTest {
     @Mock
     private BannedUsersRepository bannedUsersRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
     @BeforeEach
     void setUp() {
 
@@ -57,7 +61,7 @@ public class BanCommandTest {
     @Test
     void testNoArgs() {
         Output output = new Output();
-        BanCommand uut = new BanCommand(repositoryBundle, commService, applicationContext, bannedUsersRepository);
+        BanCommand uut = new BanCommand(repositoryBundle, commService, applicationContext, bannedUsersRepository, userRepository);
 
         Question result = uut.execute(question, wsContext, List.of("BAN"), new Input("ban"), output);
 

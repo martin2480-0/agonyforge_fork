@@ -131,6 +131,10 @@ public class CommService extends EchoService {
             .forEach(ch -> sendTo(ch, message));
     }
 
+    public void reloadUser(String principal) {
+        simpMessagingTemplate.convertAndSendToUser(principal, "/queue/reload", "reload");
+    }
+
     /**
      * Send a message to the provided list of characters.
      *

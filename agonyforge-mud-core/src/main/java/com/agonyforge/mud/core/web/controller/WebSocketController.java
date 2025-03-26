@@ -13,7 +13,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
 import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.messaging.simp.annotation.SubscribeMapping;
 import org.springframework.stereotype.Controller;
@@ -80,6 +82,14 @@ public class WebSocketController {
             .append(greeting)
             .append(initialQuestion.prompt(wsContext));
     }
+
+    @MessageMapping("/reload")
+    @SendToUser(value = "/queue/reload")
+    public String sendReloadSignal() {
+        return "reload";
+    }
+
+
 
     @MessageMapping("/input")
     @SendToUser(value = "/queue/output", broadcast = false)

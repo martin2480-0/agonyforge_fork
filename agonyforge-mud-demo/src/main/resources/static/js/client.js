@@ -90,6 +90,12 @@ function connect() {
                 }
             },
             {});
+
+            stompClient.subscribe('/user/queue/reload', function (message) {
+                if (message.body === "reload") {
+                    window.location.reload();
+                }
+                });
         },
         function(event) { // errorCallback
             console.log(`Connection error: ${event.code} => ${event.reason}`);
