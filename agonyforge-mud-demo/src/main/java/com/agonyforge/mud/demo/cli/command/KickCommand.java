@@ -44,9 +44,14 @@ public class KickCommand extends AbstractCommand {
 
         String principal = target.getCreatedBy();
 
+        target.setLocation(null);
+        getRepositoryBundle().getCharacterRepository().save(target);
+
         getCommService().reloadUser(principal);
 
         LOGGER.info("{} has been kicked.", ch.getCharacter().getName());
+
+        output.append("[yellow]%s has been kicked!", ch.getCharacter().getName());
 
         getCommService().sendToAll(webSocketContext,
             new Output("[yellow]%s has been kicked!", ch.getCharacter().getName()), ch);

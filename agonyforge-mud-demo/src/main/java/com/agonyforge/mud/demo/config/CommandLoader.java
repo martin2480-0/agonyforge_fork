@@ -52,7 +52,7 @@ public class CommandLoader {
             refs.put("HELP", new CommandReference(4, "HELP", "helpCommand", "Get help with commands.", false, true));
 
             refs.put("LOOK", new CommandReference(5, "LOOK", "lookCommand", "Look at things in the world.", true, false));
-            refs.put("WHO", new CommandReference(5, "WHO", "whoCommand", "See who is playing.", false, true));
+            refs.put("WHO", new CommandReference(5, "WHO", "whoCommand", "See who is playing.", true, true));
             refs.put("SCORE", new CommandReference(5, "SCORE", "scoreCommand", "See your character sheet.", true, true));
             refs.put("EQUIPMENT", new CommandReference(5, "EQUIPMENT", "equipmentCommand", "See what you're wearing.", true, true));
             refs.put("INVENTORY", new CommandReference(5, "INVENTORY", "inventoryCommand", "See what you're carrying.", true, true));

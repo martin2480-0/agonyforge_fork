@@ -52,6 +52,8 @@ public class ForceCommandTest {
 
     }
 
+    // FORCE <user> <command> args
+
     @Test
     void testNoArgs() {
         Output output = new Output();
@@ -64,4 +66,23 @@ public class ForceCommandTest {
         verifyNoInteractions(commandRepository);
         verifyNoInteractions(commService);
     }
+
+    @Test
+    void testOneArg() {
+        String input = "force u";
+
+        verifyNoInteractions(commandRepository);
+        verifyNoInteractions(commService);
+    }
+
+    @Test
+    void testSupportedCommand() {
+        String input = "force u who";
+    }
+
+    @Test
+    void testUnsupportedCommand() {
+        String input = "force u quit";
+    }
+
 }

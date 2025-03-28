@@ -68,7 +68,6 @@ public class BanCommand extends AbstractCommand {
     @Override
     public Question execute(Question question, WebSocketContext webSocketContext, List<String> tokens, Input input, Output output) {
         try {
-
             MudCharacter ch = getCurrentCharacter(webSocketContext, output);
 
 
@@ -180,6 +179,10 @@ public class BanCommand extends AbstractCommand {
                 }
 
                 User user = optionalUser.get();
+
+                target.setLocation(null);
+
+                getRepositoryBundle().getCharacterRepository().save(target);
 
                 BannedUser bannedUserInstance = new BannedUser(user, perm, date, reason);
 
