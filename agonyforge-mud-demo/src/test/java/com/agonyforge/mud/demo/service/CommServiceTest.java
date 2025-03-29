@@ -87,11 +87,11 @@ public class CommServiceTest {
 
         attributes.put(MUD_QUESTION, "commandQuestion");
 
-        when(question.prompt(any(WebSocketContext.class))).thenReturn(new Output(Arrays.asList("", "[default]> ")));
+        lenient().when(question.prompt(any(WebSocketContext.class))).thenReturn(new Output(Arrays.asList("", "[default]> ")));
         lenient().when(sessionAttributeService.getSessionAttributes(eq(wsSessionId))).thenReturn(attributes);
         lenient().when(sessionAttributeService.getSessionAttributes(eq(targetWsSessionId))).thenReturn(attributes);
         lenient().when(sessionAttributeService.getSessionAttributes(eq(otherWsSessionId))).thenReturn(attributes);
-        when(applicationContext.getBean(eq("commandQuestion"), eq(Question.class))).thenReturn(question);
+        lenient().when(applicationContext.getBean(eq("commandQuestion"), eq(Question.class))).thenReturn(question);
 
         lenient().when(webSocketContext.getSessionId()).thenReturn(wsSessionId);
 
@@ -254,6 +254,26 @@ public class CommServiceTest {
             eq("/queue/output"),
             any(Output.class),
             any(MessageHeaders.class)
+        );
+
+        verifyNoMoreInteractions(simpMessagingTemplate);
+    }
+
+    @Test
+    void testReloadUser() {
+        CommService uut = new CommService(
+            applicationContext,
+            simpMessagingTemplate,
+            simpUserRegistry,
+            sessionAttributeService,
+            characterRepository);
+
+        uut.reloadUser(targetPrincipal);
+
+        verify(simpMessagingTemplate).convertAndSendToUser(
+            eq(targetPrincipal),
+            eq("/queue/reload"),
+            eq("reload")
         );
 
         verifyNoMoreInteractions(simpMessagingTemplate);

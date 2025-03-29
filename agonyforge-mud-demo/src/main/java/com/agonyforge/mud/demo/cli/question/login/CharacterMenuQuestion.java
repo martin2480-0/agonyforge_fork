@@ -13,7 +13,9 @@ import com.agonyforge.mud.core.cli.menu.impl.MenuPrompt;
 import com.agonyforge.mud.core.cli.menu.impl.MenuTitle;
 import com.agonyforge.mud.demo.cli.question.BaseQuestion;
 import com.agonyforge.mud.demo.model.impl.BannedUser;
+import com.agonyforge.mud.demo.model.impl.ReloadedUser;
 import com.agonyforge.mud.demo.model.repository.BannedUsersRepository;
+import com.agonyforge.mud.demo.model.repository.ReloadedUsersRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
@@ -29,12 +31,14 @@ import static com.agonyforge.mud.core.config.SessionConfiguration.MUD_CHARACTER;
 public class CharacterMenuQuestion extends BaseQuestion {
     private final MenuPane menuPane = new MenuPane();
     private final BannedUsersRepository bannedUsersRepository;
+    private final ReloadedUsersRepository reloadedUsersRepository;
 
     @Autowired
     public CharacterMenuQuestion(ApplicationContext applicationContext,
-                                 RepositoryBundle repositoryBundle, BannedUsersRepository bannedUsersRepository) {
+                                 RepositoryBundle repositoryBundle, BannedUsersRepository bannedUsersRepository, ReloadedUsersRepository reloadedUsersRepository) {
         super(applicationContext, repositoryBundle);
         this.bannedUsersRepository = bannedUsersRepository;
+        this.reloadedUsersRepository = reloadedUsersRepository;
 
         menuPane.setPrompt(new MenuPrompt());
     }
@@ -43,25 +47,33 @@ public class CharacterMenuQuestion extends BaseQuestion {
     public Output prompt(WebSocketContext wsContext) {
         Principal principal = wsContext.getPrincipal();
 
+        String reloadReason = null;
+        Optional<ReloadedUser> reloadedUserOptional = reloadedUsersRepository.findByReloadedUser_PrincipalName(principal.getName());
+        if (reloadedUserOptional.isPresent()) {
+            ReloadedUser reloadedUser = reloadedUserOptional.get();
+            reloadReason = reloadedUser.getReason();
+            reloadedUsersRepository.delete(reloadedUser);
+        }
+
         Optional<BannedUser> bannedUserOptional = bannedUsersRepository.findByBannedUser_PrincipalName(principal.getName());
 
         if (bannedUserOptional.isPresent()) {
 
             BannedUser bannedUser = bannedUserOptional.get();
 
-            String reason = bannedUser.getReason();
+            String banReason = bannedUser.getReason();
 
             String banType = bannedUser.isPermanent() ? "permanent" : "temporary";
 
-            if (reason.isBlank()) {
-                reason = "Not given";
+            if (banReason.isBlank()) {
+                banReason = "Not given";
             }
 
             menuPane.setTitle(new MenuTitle("You have been banned"));
 
             menuPane.getItems().clear();
 
-            menuPane.getItems().add(new MenuItem("", String.format("Reason: %s",reason)));
+            menuPane.getItems().add(new MenuItem("", String.format("Reason: %s",banReason)));
             menuPane.getItems().add(new MenuItem("", String.format("Type: %s", banType)));
             if (!bannedUser.isPermanent()) {
                 String startDate = bannedUser.getBannedOn().toString();
@@ -78,7 +90,7 @@ public class CharacterMenuQuestion extends BaseQuestion {
         }
 
 
-        populateMenuItems(principal);
+        populateMenuItems(principal, reloadReason);
 
         menuPane.setTitle(new MenuTitle("Your Characters"));
         return menuPane.render(Color.WHITE, Color.BLACK);
@@ -144,7 +156,16 @@ public class CharacterMenuQuestion extends BaseQuestion {
     }
 
     private void populateMenuItems(Principal principal) {
+        populateMenuItems(principal, null);
+    }
+
+    private void populateMenuItems(Principal principal, String reason) {
         menuPane.getItems().clear();
+
+        if (reason != null && !reason.isEmpty()) {
+            menuPane.getItems().add(new MenuItem("", String.format("[red]%s",reason)));
+        }
+
         menuPane.getItems().add(new MenuItem("N", "New Character"));
 
         getRepositoryBundle().getCharacterRepository().findByPlayerUsername(principal.getName())

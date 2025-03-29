@@ -59,6 +59,9 @@ public class CommandQuestionTest {
     private CharacterComponent characterComponent;
 
     @Mock
+    private CommandReference commandReference;
+
+    @Mock
     private Role role;
 
     @Mock
@@ -133,6 +136,61 @@ public class CommandQuestionTest {
 
         verify(commandRepository).findFirstByNameStartingWith(eq("TEST"), eq(Sort.by(Sort.Order.asc("priority"))));
         verify(applicationContext).getBean(eq("testCommand"), eq(Command.class));
+    }
+
+    @Test
+    void testAnswerFrozenAbleToExecute() {
+        CommandReference commandReference = mock(CommandReference.class);
+
+        when(commandReference.getBeanName()).thenReturn("testCommand");
+
+        when(role.getCommands()).thenReturn(Set.of(commandReference));
+        when(ch.getPlayer()).thenReturn(playerComponent);
+        when(ch.getPlayer().getRoles()).thenReturn(Set.of(role));
+        when(characterRepository.findById(any())).thenReturn(Optional.of(ch));
+        when(ch.isFrozen()).thenReturn(false);
+        when(commandRepository.findFirstByNameStartingWith(eq("TEST"), eq(Sort.by(Sort.Order.asc("priority"))))).thenReturn(Optional.of(commandReference));
+        when(applicationContext.getBean(eq("testCommand"), eq(Command.class))).thenReturn(command);
+        when(command.execute(any(Question.class), any(WebSocketContext.class), anyList(), any(Input.class), any(Output.class))).thenReturn(question);
+
+
+        CommandQuestion uut = new CommandQuestion(applicationContext, repositoryBundle, commandRepository);
+        Response result = uut.answer(webSocketContext, new Input("test"));
+        Output output = result.getFeedback().orElseThrow();
+
+        assertEquals(question, result.getNext());
+        assertNotNull(output);
+
+        verify(commandRepository).findFirstByNameStartingWith(eq("TEST"), eq(Sort.by(Sort.Order.asc("priority"))));
+        verify(applicationContext).getBean(eq("testCommand"), eq(Command.class));
+    }
+
+    @Test
+    void testAnswerFrozenNotAbleToExecute() {
+        CommandReference commandReference = mock(CommandReference.class);
+
+        when(commandReference.getBeanName()).thenReturn("testCommand");
+
+        when(role.getCommands()).thenReturn(Set.of(commandReference));
+        when(ch.getPlayer()).thenReturn(playerComponent);
+        when(ch.getPlayer().getRoles()).thenReturn(Set.of(role));
+        when(ch.isFrozen()).thenReturn(true);
+        when(commandReference.isCanExecuteWhileFrozen()).thenReturn(false);
+        when(characterRepository.findById(any())).thenReturn(Optional.of(ch));
+        when(ch.getCharacter()).thenReturn(characterComponent);
+        when(characterComponent.getName()).thenReturn("testCharacter");
+        when(commandRepository.findFirstByNameStartingWith(eq("TEST"), eq(Sort.by(Sort.Order.asc("priority"))))).thenReturn(Optional.of(commandReference));
+        when(applicationContext.getBean(eq("testCommand"), eq(Command.class))).thenReturn(command);
+
+        CommandQuestion uut = new CommandQuestion(applicationContext, repositoryBundle, commandRepository);
+        Response result = uut.answer(webSocketContext, new Input("test"));
+        assertEquals(uut, result.getNext());
+        Output output = result.getFeedback().orElseThrow();
+
+        assertNotNull(output);
+
+        verify(commandRepository).findFirstByNameStartingWith(eq("TEST"), eq(Sort.by(Sort.Order.asc("priority"))));
+       assertEquals(uut, result.getNext());
     }
 
     @Test

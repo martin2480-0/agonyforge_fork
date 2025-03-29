@@ -59,13 +59,16 @@ public class AbstractCommandTest {
     private MudCharacter ch;
 
     @Mock
+    private MudCharacter forceCh;
+
+    @Mock
     private MudCharacter target;
 
     @Mock
     private CharacterComponent chCharacterComponent, targetCharacterComponent;
 
     @Mock
-    private LocationComponent chLocationComponent, targetLocationComponent;
+    private LocationComponent chLocationComponent, targetLocationComponent, forceChLocationComponent;
 
     @Mock
     private MudRoom room;
@@ -162,6 +165,39 @@ public class AbstractCommandTest {
             List.of("TEST"),
             new Input("test"),
             output));
+    }
+
+    @Test
+    void testGetCharacterForceUserTrueValid() {
+        Long chId = random.nextLong();
+        Long forceUserId = random.nextLong();
+        lenient().when(characterRepository.findById(eq(chId))).thenReturn(Optional.of(ch));
+        lenient().when(ch.getId()).thenReturn(chId);
+
+        lenient().when(characterRepository.findById(eq(forceUserId))).thenReturn(Optional.of(forceCh));
+        lenient().when(forceCh.getId()).thenReturn(forceUserId);
+
+        when(webSocketContext.getAttributes()).thenReturn(Map.of(
+            MUD_CHARACTER, chId,
+            "force_user", forceUserId
+        ));
+
+        lenient().when(ch.getLocation()).thenReturn(chLocationComponent);
+        lenient().when(forceCh.getLocation()).thenReturn(forceChLocationComponent);
+        lenient().when(ch.getLocation().getRoom()).thenReturn(room);
+        lenient().when(forceCh.getLocation().getRoom()).thenReturn(room);
+
+        AbstractCommand uut = new AbstractCommand(repositoryBundle, commService, applicationContext) {
+            @Override
+            public Question execute(Question question, WebSocketContext webSocketContext, List<String> tokens, Input input, Output output) {
+                return question;
+            }
+        };
+
+        MudCharacter foundChar = uut.getCurrentCharacter(webSocketContext, new Output());
+
+        assertEquals(foundChar.getId(), forceUserId);
+
     }
 
     @Test

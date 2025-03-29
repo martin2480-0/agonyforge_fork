@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(MockitoExtension.class)
 public class CommandReferenceTest {
@@ -33,5 +34,23 @@ public class CommandReferenceTest {
         uut.setBeanName("beanName");
 
         assertEquals("beanName", uut.getBeanName());
+    }
+
+    @Test
+    void testCanBeForced() {
+        CommandReference uut = new CommandReference();
+
+        uut.setCanBeForced(true);
+
+        assertTrue(uut.isCanBeForced());
+    }
+
+    @Test
+    void testExecuteWhileFrozen() {
+        CommandReference uut = new CommandReference();
+
+        uut.setCanExecuteWhileFrozen(true);
+
+        assertTrue(uut.isCanExecuteWhileFrozen());
     }
 }

@@ -6,6 +6,10 @@ import com.agonyforge.mud.core.web.model.Output;
 import com.agonyforge.mud.core.web.model.WebSocketContext;
 import com.agonyforge.mud.demo.cli.RepositoryBundle;
 import com.agonyforge.mud.demo.model.impl.MudCharacter;
+import com.agonyforge.mud.demo.model.impl.ReloadedUser;
+import com.agonyforge.mud.demo.model.impl.User;
+import com.agonyforge.mud.demo.model.repository.ReloadedUsersRepository;
+import com.agonyforge.mud.demo.model.repository.UserRepository;
 import com.agonyforge.mud.demo.service.CommService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -16,9 +20,15 @@ import java.util.Optional;
 
 @Component
 public class SlayCommand extends AbstractCommand {
+
+    private final UserRepository userRepository;
+    private final ReloadedUsersRepository reloadedUsersRepository;
+
     @Autowired
-    public SlayCommand(RepositoryBundle repositoryBundle, CommService commService, ApplicationContext applicationContext) {
+    public SlayCommand(RepositoryBundle repositoryBundle, CommService commService, ApplicationContext applicationContext, UserRepository userRepository, ReloadedUsersRepository reloadedUsersRepository) {
         super(repositoryBundle, commService, applicationContext);
+        this.userRepository = userRepository;
+        this.reloadedUsersRepository = reloadedUsersRepository;
     }
 
     @Override
@@ -42,6 +52,19 @@ public class SlayCommand extends AbstractCommand {
 
         String principal = target.getCreatedBy();
 
+        Optional<User> optionalUser = userRepository.findUserByPrincipalName(principal);
+
+        if (optionalUser.isEmpty()) {
+            output.append("[red]Can't find that player.");
+            return question;
+        }
+
+        User targetUser = optionalUser.get();
+
+        ReloadedUser reloadedUser = new ReloadedUser(targetUser, String.format("Your character %s has been slayed!", target.getCharacter().getName()));
+
+        reloadedUsersRepository.save(reloadedUser);
+
         getCommService().reloadUser(principal);
 
         output.append("[yellow]You snap your fingers, and %s disappears!", target.getCharacter().getName());
@@ -50,6 +73,8 @@ public class SlayCommand extends AbstractCommand {
                 ch.getCharacter().getName(),
                 ch.getCharacter().getPronoun().getPossessive(),
                 target.getCharacter().getName()), ch);
+
+
 
         return question;
     }

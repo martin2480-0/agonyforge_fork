@@ -7,7 +7,11 @@ import com.agonyforge.mud.core.web.model.WebSocketContext;
 import com.agonyforge.mud.demo.cli.RepositoryBundle;
 import com.agonyforge.mud.demo.model.impl.CommandReference;
 import com.agonyforge.mud.demo.model.impl.MudCharacter;
+import com.agonyforge.mud.demo.model.impl.ReloadedUser;
+import com.agonyforge.mud.demo.model.impl.User;
 import com.agonyforge.mud.demo.model.repository.CommandRepository;
+import com.agonyforge.mud.demo.model.repository.ReloadedUsersRepository;
+import com.agonyforge.mud.demo.model.repository.UserRepository;
 import com.agonyforge.mud.demo.service.CommService;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
@@ -19,9 +23,13 @@ import java.util.Optional;
 
 @Component
 public class KickCommand extends AbstractCommand {
+    private final ReloadedUsersRepository reloadedUsersRepository;
+    private final UserRepository userRepository;
 
-    public KickCommand(RepositoryBundle repositoryBundle, CommService commService, ApplicationContext applicationContext) {
+    public KickCommand(RepositoryBundle repositoryBundle, CommService commService, ApplicationContext applicationContext, UserRepository userRepository, ReloadedUsersRepository reloadedUsersRepository) {
         super(repositoryBundle, commService, applicationContext);
+        this.reloadedUsersRepository = reloadedUsersRepository;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -47,6 +55,19 @@ public class KickCommand extends AbstractCommand {
         target.setLocation(null);
         getRepositoryBundle().getCharacterRepository().save(target);
 
+        Optional<User> optionalUser = userRepository.findUserByPrincipalName(principal);
+
+        if (optionalUser.isEmpty()) {
+            output.append("[red]Can't find that player.");
+            return question;
+        }
+
+        User targetUser = optionalUser.get();
+
+        ReloadedUser reloadedUser = new ReloadedUser(targetUser, "You have been kicked!");
+
+        reloadedUsersRepository.save(reloadedUser);
+
         getCommService().reloadUser(principal);
 
         LOGGER.info("{} has been kicked.", ch.getCharacter().getName());
@@ -55,6 +76,7 @@ public class KickCommand extends AbstractCommand {
 
         getCommService().sendToAll(webSocketContext,
             new Output("[yellow]%s has been kicked!", ch.getCharacter().getName()), ch);
+
 
         return question;
     }
