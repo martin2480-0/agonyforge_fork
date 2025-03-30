@@ -5,19 +5,15 @@ import com.agonyforge.mud.core.web.model.Input;
 import com.agonyforge.mud.core.web.model.Output;
 import com.agonyforge.mud.core.web.model.WebSocketContext;
 import com.agonyforge.mud.demo.cli.RepositoryBundle;
-import com.agonyforge.mud.demo.model.impl.CommandReference;
 import com.agonyforge.mud.demo.model.impl.MudCharacter;
 import com.agonyforge.mud.demo.model.impl.ReloadedUser;
 import com.agonyforge.mud.demo.model.impl.User;
-import com.agonyforge.mud.demo.model.repository.CommandRepository;
 import com.agonyforge.mud.demo.model.repository.ReloadedUsersRepository;
 import com.agonyforge.mud.demo.model.repository.UserRepository;
 import com.agonyforge.mud.demo.service.CommService;
-import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -70,12 +66,12 @@ public class KickCommand extends AbstractCommand {
 
         getCommService().reloadUser(principal);
 
-        LOGGER.info("{} has been kicked.", ch.getCharacter().getName());
+        LOGGER.info("{} has been kicked.", target.getCharacter().getName());
 
-        output.append("[yellow]%s has been kicked!", ch.getCharacter().getName());
+        output.append("[yellow]%s has been kicked!", target.getCharacter().getName());
 
         getCommService().sendToAll(webSocketContext,
-            new Output("[yellow]%s has been kicked!", ch.getCharacter().getName()), ch);
+                new Output("[yellow]%s has been kicked!", target.getCharacter().getName()), ch);
 
 
         return question;

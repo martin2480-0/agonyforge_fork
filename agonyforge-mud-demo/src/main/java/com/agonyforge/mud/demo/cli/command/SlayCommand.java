@@ -35,7 +35,7 @@ public class SlayCommand extends AbstractCommand {
     public Question execute(Question question, WebSocketContext webSocketContext, List<String> tokens, Input input, Output output) {
         MudCharacter ch = getCurrentCharacter(webSocketContext, output);
 
-        if (tokens.size() != 2) {
+        if (tokens.size() < 2) {
             output.append("[default]Whom do you wish to slay?");
             return question;
         }

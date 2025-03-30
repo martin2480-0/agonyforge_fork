@@ -13,6 +13,7 @@ import com.agonyforge.mud.demo.model.repository.UserRepository;
 import com.agonyforge.mud.demo.service.CommService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -27,11 +28,13 @@ import java.util.Random;
 import static com.agonyforge.mud.core.config.SessionConfiguration.MUD_CHARACTER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
-public class KickCommandTest {
+public class SlayCommandTest {
     private static final Random RANDOM = new Random();
 
     @Mock
@@ -102,8 +105,10 @@ public class KickCommandTest {
         lenient().when(ch.getLocation()).thenReturn(chLocation);
         lenient().when(chLocation.getRoom()).thenReturn(destination);
         lenient().when(ch.getCharacter()).thenReturn(chCharacter);
+        lenient().when(chCharacter.getPronoun()).thenReturn(Pronoun.XE);
         lenient().when(chCharacter.getName()).thenReturn("Scion");
         lenient().when(ch.getPlayer()).thenReturn(chPlayer);
+        when(ch.getLocation().getRoom()).thenReturn(room);
 
         lenient().when(mudCharacterRepository.findById(eq(targetId))).thenReturn(Optional.of(target));
         lenient().when(target.getLocation()).thenReturn(targetLocation);
@@ -112,64 +117,66 @@ public class KickCommandTest {
         lenient().when(targetCharacter.getName()).thenReturn("Target");
         lenient().when(targetCharacter.getPronoun()).thenReturn(Pronoun.THEY);
         lenient().when(target.getPlayer()).thenReturn(chPlayer);
+        lenient().when(target.getLocation().getRoom()).thenReturn(room);
+
+        lenient().when(mudCharacterRepository.findByLocationRoom(eq(room))).thenReturn(List.of(target, ch));
+
     }
 
-
     @Test
-    void testKickNoArgs() {
+    void testSlayNoArgs() {
         Output output = new Output();
-        KickCommand uut = new KickCommand(repositoryBundle, commService, applicationContext, userRepository, reloadedUsersRepository);
+        SlayCommand uut = new SlayCommand(repositoryBundle, commService, applicationContext, userRepository, reloadedUsersRepository);
 
-        Question result = uut.execute(question, wsContext, List.of("KICK"), new Input("kick"), output);
+        Question result = uut.execute(question, wsContext, List.of("SLAY"), new Input("slay"), output);
 
         assertEquals(question, result);
-        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("Whom would you like to kick?")));
+        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("Whom do you wish to slay?")));
 
         verifyNoInteractions(commService);
         verifyNoInteractions(userRepository);
         verifyNoInteractions(reloadedUsersRepository);
     }
 
-
     @Test
-    void testKickValidUser() {
-
-        when(mudCharacterRepository.findAll()).thenReturn(List.of(ch, target));
+    void testSlayValidUser() {
+        lenient().when(mudCharacterRepository.findAll()).thenReturn(List.of(ch, target));
 
         Output output = new Output();
-        KickCommand uut = new KickCommand(repositoryBundle, commService, applicationContext, userRepository, reloadedUsersRepository);
+        SlayCommand uut = new SlayCommand(repositoryBundle, commService, applicationContext, userRepository, reloadedUsersRepository);
 
-        Question result = uut.execute(question, wsContext, List.of("KICK", "TARGET"), new Input("kick Target"), output);
+        Question result = uut.execute(question, wsContext, List.of("SLAY", "TARGET"), new Input("slay Target"), output);
 
         assertEquals(question, result);
-        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("Target has been kicked!")));
+        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("You snap your fingers, and Target disappears!")));
 
         verify(reloadedUsersRepository).save(any());
 
         verify(commService).reloadUser(targetPrincipal);
 
-        verify(commService).sendToAll(eq(wsContext), any(Output.class), eq(ch));
+        verify(commService).sendToRoom(any(), any(Output.class), eq(ch));
 
     }
 
     @Test
-    void testKickInvalidUser() {
-        when(mudCharacterRepository.findAll()).thenReturn(List.of(ch, target));
+    void testSlayInvalidUser() {
+        lenient().when(mudCharacterRepository.findAll()).thenReturn(List.of(ch, target));
 
         Output output = new Output();
-        KickCommand uut = new KickCommand(repositoryBundle, commService, applicationContext, userRepository, reloadedUsersRepository);
+        SlayCommand uut = new SlayCommand(repositoryBundle, commService, applicationContext, userRepository, reloadedUsersRepository);
 
-        Question result = uut.execute(question, wsContext, List.of("KICK", "CARMEN"), new Input("kick Carmen"), output);
+        Question result = uut.execute(question, wsContext, List.of("SLAY", "CARMEN"), new Input("slay Carmen"), output);
 
         assertEquals(question, result);
-        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("Can't find that player.")));
+        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("You don't see anyone like that.")));
 
         verifyNoInteractions(userRepository);
         verifyNoInteractions(reloadedUsersRepository);
 
         verify(commService, never()).reloadUser(targetPrincipal);
 
-        verify(commService, never()).sendToAll(eq(wsContext), any(Output.class), eq(ch));
+        verify(commService, never()).sendToRoom(any(), any(Output.class), eq(ch));
 
     }
+
 }

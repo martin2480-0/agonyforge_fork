@@ -11,11 +11,9 @@ import com.agonyforge.mud.demo.model.impl.User;
 import com.agonyforge.mud.demo.model.repository.BannedUsersRepository;
 import com.agonyforge.mud.demo.model.repository.UserRepository;
 import com.agonyforge.mud.demo.service.CommService;
-import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -36,30 +34,49 @@ public class BanCommand extends AbstractCommand {
     }
 
     public static Date getBanTime(Date date, String banTime) {
+        if (date == null || banTime == null || banTime.isEmpty()) {
+            return null;
+        }
+
         int seconds = 0;
 
         Pattern pattern = Pattern.compile("(\\d+)([dhm])", Pattern.CASE_INSENSITIVE);
         Matcher matcher = pattern.matcher(banTime);
 
         while (matcher.find()) {
-            int value = Integer.parseInt(matcher.group(1));
-            String unit = matcher.group(2).toLowerCase();
+            try {
+                int value = Integer.parseInt(matcher.group(1));
+                String unit = matcher.group(2).toLowerCase();
 
-            switch (unit) {
-                case "d":
-                    seconds += value * 86400;
-                    break;
-                case "h":
-                    seconds += value * 3600;
-                    break;
-                case "m":
-                    seconds += value * 60;
-                    break;
+                if (value < 0) {
+                    return null;
+                }
+
+                switch (unit) {
+                    case "d":
+                        seconds += value * 86400;
+                        break;
+                    case "h":
+                        seconds += value * 3600;
+                        break;
+                    case "m":
+                        seconds += value * 60;
+                        break;
+                    default:
+                        return null;
+                }
+            } catch (NumberFormatException e) {
+                return null;
             }
+        }
+
+        if (seconds <= 0) {
+            return null;
         }
 
         return new Date(date.getTime() + (seconds * 1000L));
     }
+
 
     // BAN add <user> PERM <důvod>
     // BAN add <user> TEMP <doba> <důvod>
@@ -69,7 +86,6 @@ public class BanCommand extends AbstractCommand {
     public Question execute(Question question, WebSocketContext webSocketContext, List<String> tokens, Input input, Output output) {
         try {
             MudCharacter ch = getCurrentCharacter(webSocketContext, output);
-
 
             if (tokens.size() < 2) {
                 output.append("[default]What ban action would you like to take?");
@@ -166,6 +182,11 @@ public class BanCommand extends AbstractCommand {
                 } else {
                     String duration = tokens.get(4);
                     date = getBanTime(new Date(), duration);
+
+                    if (date == null) {
+                        output.append("[red]Invalid time format.");
+                    }
+
                     reason = String.join(" ", tokens.subList(5, tokens.size()));
                 }
 
@@ -219,6 +240,11 @@ public class BanCommand extends AbstractCommand {
                 Date currentBanEnd = bannedUser.getBannedToDate();
                 String duration = tokens.get(3);
                 Date newBanEnd = getBanTime(currentBanEnd, duration);
+
+                if (newBanEnd == null) {
+                    output.append("[red]Invalid time format.");
+                    return question;
+                }
 
                 bannedUser.setBannedToDate(newBanEnd);
 
