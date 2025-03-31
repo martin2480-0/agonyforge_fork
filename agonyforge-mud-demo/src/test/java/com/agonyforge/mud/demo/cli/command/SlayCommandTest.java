@@ -13,7 +13,6 @@ import com.agonyforge.mud.demo.model.repository.UserRepository;
 import com.agonyforge.mud.demo.service.CommService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -91,6 +90,8 @@ public class SlayCommandTest {
         Long chId = RANDOM.nextLong();
         Long targetId = RANDOM.nextLong();
 
+        lenient().when(mudCharacterRepository.findAll()).thenReturn(List.of(ch, target));
+
 
         lenient().when(wsContext.getAttributes()).thenReturn(Map.of(MUD_CHARACTER, chId));
 
@@ -140,8 +141,6 @@ public class SlayCommandTest {
 
     @Test
     void testSlayValidUser() {
-        lenient().when(mudCharacterRepository.findAll()).thenReturn(List.of(ch, target));
-
         Output output = new Output();
         SlayCommand uut = new SlayCommand(repositoryBundle, commService, applicationContext, userRepository, reloadedUsersRepository);
 
@@ -160,7 +159,6 @@ public class SlayCommandTest {
 
     @Test
     void testSlayInvalidUser() {
-        lenient().when(mudCharacterRepository.findAll()).thenReturn(List.of(ch, target));
 
         Output output = new Output();
         SlayCommand uut = new SlayCommand(repositoryBundle, commService, applicationContext, userRepository, reloadedUsersRepository);

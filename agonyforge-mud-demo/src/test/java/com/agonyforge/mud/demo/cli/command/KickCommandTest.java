@@ -88,6 +88,8 @@ public class KickCommandTest {
         Long chId = RANDOM.nextLong();
         Long targetId = RANDOM.nextLong();
 
+        lenient().when(mudCharacterRepository.findAll()).thenReturn(List.of(ch, target));
+
 
         lenient().when(wsContext.getAttributes()).thenReturn(Map.of(MUD_CHARACTER, chId));
 
@@ -134,8 +136,6 @@ public class KickCommandTest {
     @Test
     void testKickValidUser() {
 
-        when(mudCharacterRepository.findAll()).thenReturn(List.of(ch, target));
-
         Output output = new Output();
         KickCommand uut = new KickCommand(repositoryBundle, commService, applicationContext, userRepository, reloadedUsersRepository);
 
@@ -154,7 +154,6 @@ public class KickCommandTest {
 
     @Test
     void testKickInvalidUser() {
-        when(mudCharacterRepository.findAll()).thenReturn(List.of(ch, target));
 
         Output output = new Output();
         KickCommand uut = new KickCommand(repositoryBundle, commService, applicationContext, userRepository, reloadedUsersRepository);

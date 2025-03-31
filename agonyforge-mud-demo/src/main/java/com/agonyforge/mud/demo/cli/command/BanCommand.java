@@ -37,38 +37,25 @@ public class BanCommand extends AbstractCommand {
         if (date == null || banTime == null || banTime.isEmpty()) {
             return null;
         }
+        Pattern pattern = Pattern.compile("^(\\d+d)?(\\d+h)?(\\d+m)?$", Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(banTime);
+
+        if (!matcher.matches()) {
+            return null;
+        }
 
         int seconds = 0;
 
-        Pattern pattern = Pattern.compile("(\\d+)([dhm])", Pattern.CASE_INSENSITIVE);
-        Matcher matcher = pattern.matcher(banTime);
-
-        while (matcher.find()) {
-            try {
-                int value = Integer.parseInt(matcher.group(1));
-                String unit = matcher.group(2).toLowerCase();
-
-                if (value < 0) {
-                    return null;
-                }
-
-                switch (unit) {
-                    case "d":
-                        seconds += value * 86400;
-                        break;
-                    case "h":
-                        seconds += value * 3600;
-                        break;
-                    case "m":
-                        seconds += value * 60;
-                        break;
-                    default:
-                        return null;
-                }
-            } catch (NumberFormatException e) {
-                return null;
-            }
+        if (matcher.group(1) != null) {
+            seconds += Integer.parseInt(matcher.group(1).replaceAll("(?i)d", "")) * 86400;
         }
+        if (matcher.group(2) != null) {
+            seconds += Integer.parseInt(matcher.group(2).replaceAll("(?i)h", "")) * 3600;
+        }
+        if (matcher.group(3) != null) {
+            seconds += Integer.parseInt(matcher.group(3).replaceAll("(?i)m", "")) * 60;
+        }
+
 
         if (seconds <= 0) {
             return null;
@@ -142,13 +129,14 @@ public class BanCommand extends AbstractCommand {
                 return question;
             }
 
-            if (tokens.size() < 3 && "add".equalsIgnoreCase(banAction)) {
+            if (tokens.size() < 4 && "add".equalsIgnoreCase(banAction)) {
                 output.append("[red]You must specify a ban type.");
                 return question;
             }
 
             if (tokens.size() < 4 && "renew".equalsIgnoreCase(banAction)) {
                 output.append("[red]You must specify a ban renewal duration.");
+                return question;
             }
 
 
@@ -185,6 +173,7 @@ public class BanCommand extends AbstractCommand {
 
                     if (date == null) {
                         output.append("[red]Invalid time format.");
+                        return question;
                     }
 
                     reason = String.join(" ", tokens.subList(5, tokens.size()));
@@ -214,10 +203,12 @@ public class BanCommand extends AbstractCommand {
 
                 getCommService().reloadUser(principal);
 
-                LOGGER.info("{} has been banned.", ch.getCharacter().getName());
+                LOGGER.info("{} has been banned!", target.getCharacter().getName());
+
+                output.append("[yellow]%s has been banned!", target.getCharacter().getName());
 
                 getCommService().sendToAll(webSocketContext,
-                    new Output("[yellow]%s has been banned!", ch.getCharacter().getName()), ch);
+                    new Output("[yellow]%s has been banned!", target.getCharacter().getName()), ch);
 
                 return question;
             } else if (banAction.equalsIgnoreCase("renew")) {
@@ -246,6 +237,9 @@ public class BanCommand extends AbstractCommand {
                     return question;
                 }
 
+                output.append("[yellow]Ban has been lengthened by %s.", duration.toLowerCase());
+
+
                 bannedUser.setBannedToDate(newBanEnd);
 
                 bannedUsersRepository.save(bannedUser);
@@ -260,6 +254,8 @@ public class BanCommand extends AbstractCommand {
                 }
 
                 BannedUser bannedUser = bannedUserOptional.get();
+
+                output.append("[yellow]Player with id %s has been unbanned.", bannedUser.getId());
 
                 bannedUsersRepository.delete(bannedUser);
             }

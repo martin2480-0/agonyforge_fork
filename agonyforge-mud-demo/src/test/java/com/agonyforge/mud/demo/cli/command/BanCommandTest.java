@@ -12,7 +12,6 @@ import com.agonyforge.mud.demo.model.repository.MudCharacterRepository;
 import com.agonyforge.mud.demo.model.repository.UserRepository;
 import com.agonyforge.mud.demo.service.CommService;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -24,11 +23,9 @@ import org.springframework.context.ApplicationContext;
 import java.util.*;
 
 import static com.agonyforge.mud.core.config.SessionConfiguration.MUD_CHARACTER;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class BanCommandTest {
@@ -74,10 +71,25 @@ public class BanCommandTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private User targetUser;
+
+    @Mock
+    private BannedUser targetBannedUserTemp, targetBannedUserPerm;
+
+    private String targetPrincipal;
+
     @BeforeEach
     void setUp() {
         Long chId = RANDOM.nextLong();
         Long targetId = RANDOM.nextLong();
+        targetPrincipal = String.valueOf(RANDOM.nextLong());
+
+        lenient().when(target.getCreatedBy()).thenReturn(targetPrincipal);
+
+        lenient().when(userRepository.findUserByPrincipalName(targetPrincipal)).thenReturn(Optional.of(targetUser));
+
+        lenient().when(mudCharacterRepository.findAll()).thenReturn(List.of(ch, target));
 
         lenient().when(wsContext.getAttributes()).thenReturn(Map.of(MUD_CHARACTER, chId));
 
@@ -99,6 +111,12 @@ public class BanCommandTest {
         lenient().when(targetCharacter.getPronoun()).thenReturn(Pronoun.THEY);
         lenient().when(target.getPlayer()).thenReturn(chPlayer);
 
+        lenient().when(bannedUsersRepository.findById(1L)).thenReturn(Optional.of(targetBannedUserTemp));
+        lenient().when(targetBannedUserTemp.getId()).thenReturn(1L);
+        lenient().when(targetBannedUserTemp.isPermanent()).thenReturn(false);
+        lenient().when(bannedUsersRepository.findById(2L)).thenReturn(Optional.of(targetBannedUserPerm));
+        lenient().when(targetBannedUserPerm.getId()).thenReturn(2L);
+        lenient().when(targetBannedUserPerm.isPermanent()).thenReturn(true);
     }
 
     // BAN add <user> PERM <důvod>
@@ -144,10 +162,10 @@ public class BanCommandTest {
         "ban return\u200B",
         "ban make\u2060",
         "ban give\uFEFF",
-        "ban \u00A9addr",
-        "ban \u2022give",
-        "ban \u2212delete",
-        "ban \u2500make",
+        "ban ©addr",
+        "ban •give",
+        "ban −delete",
+        "ban ─make",
         "ban \uD83D\uDE00give"
     })
     void testOneArgumentInvalidAction(String input) {
@@ -268,18 +286,43 @@ public class BanCommandTest {
     }
 
     @Test
-    void testRemoveBan() {
-        String arg = "ban remove 1";
-    }
-
-    @Test
     void testPermBanNoReason() {
-        String arg = "ban add Target perm";
+        String command = "ban add Target perm";
+        Output output = new Output();
+        BanCommand uut = new BanCommand(repositoryBundle, commService, applicationContext, bannedUsersRepository, userRepository);
+
+        List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
+
+        Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
+
+        assertEquals(question, result);
+        assertFalse(output.getOutput().stream().anyMatch(line -> line.contains("Invalid time format.")));
+
+        verify(bannedUsersRepository).save(any());
+
+        verify(commService).reloadUser(targetPrincipal);
+
+        verify(commService).sendToAll(eq(wsContext), any(Output.class), eq(ch));
     }
 
     @Test
     void testAddPermBanWithReason() {
-        String arg = "ban add Target perm spam";
+        String command = "ban add Target perm spam";
+        Output output = new Output();
+        BanCommand uut = new BanCommand(repositoryBundle, commService, applicationContext, bannedUsersRepository, userRepository);
+
+        List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
+
+        Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
+
+        assertEquals(question, result);
+        assertFalse(output.getOutput().stream().anyMatch(line -> line.contains("Invalid time format.")));
+
+        verify(bannedUsersRepository).save(any());
+
+        verify(commService).reloadUser(targetPrincipal);
+
+        verify(commService).sendToAll(eq(wsContext), any(Output.class), eq(ch));
     }
 
     @Test
@@ -291,10 +334,9 @@ public class BanCommandTest {
         List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
 
         Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
-        // TODO fix Target not found error
+
         assertEquals(question, result);
         assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("You must specify a ban duration.")));
-
 
         verifyNoInteractions(commService);
         verifyNoInteractions(bannedUsersRepository);
@@ -313,39 +355,186 @@ public class BanCommandTest {
         "ban add Target temp 1d15d1d",
         "ban add Target temp 1m15m1m"
     })
-    void testWrongDurationTempBan(String input) {
+    void testWrongDurationTempBan(String command) {
+        Output output = new Output();
+        BanCommand uut = new BanCommand(repositoryBundle, commService, applicationContext, bannedUsersRepository, userRepository);
 
+        List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
+
+        Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
+
+        assertEquals(question, result);
+        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("Invalid time format.")));
+
+        verifyNoInteractions(commService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "ban add Target temp 1d1h15m",
+        "ban add Target temp 1d1h",
+        "ban add Target temp 1d15m",
+        "ban add Target temp 1h1m",
+        "ban add Target temp 1m",
+    })
+    void testAddTempBanNoReason(String command) {
+        Output output = new Output();
+        BanCommand uut = new BanCommand(repositoryBundle, commService, applicationContext, bannedUsersRepository, userRepository);
+
+        List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
+
+        Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
+
+        assertEquals(question, result);
+        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("Target has been banned!")));
+
+        verify(bannedUsersRepository).save(any());
+
+        verify(commService).reloadUser(targetPrincipal);
+
+        verify(commService).sendToAll(eq(wsContext), any(Output.class), eq(ch));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "ban add Target temp 1d1h15m spam",
+        "ban add Target temp 1d1h spam spam",
+        "ban add Target temp 1d15m spam spam spam",
+        "ban add Target temp 1h1m spam spam spam spam",
+        "ban add Target temp 1m spam spam spam spam spam",
+    })
+    void testAddTempBanWithReason(String command) {
+        Output output = new Output();
+        BanCommand uut = new BanCommand(repositoryBundle, commService, applicationContext, bannedUsersRepository, userRepository);
+
+        List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
+
+        Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
+
+        assertEquals(question, result);
+        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("Target has been banned!")));
+
+        verify(bannedUsersRepository).save(any());
+
+        verify(commService).reloadUser(targetPrincipal);
+
+        verify(commService).sendToAll(eq(wsContext), any(Output.class), eq(ch));
     }
 
     @Test
-    void testAddTempBan() {
-        String arg = "ban add Target temp 1d";
-    }
+    void testRemoveBan() {
+        String command = "ban remove 1";
+        Output output = new Output();
+        BanCommand uut = new BanCommand(repositoryBundle, commService, applicationContext, bannedUsersRepository, userRepository);
 
-    @Test
-    void testAddTempBanNoReason() {
-        String arg = "ban add Target temp 1d";
-    }
+        List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
 
-    @Test
-    void testAddTempBanWithReason() {
-        String arg = "ban add Target temp 1d spam";
-    }
+        Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
 
-    @Test
-    void testRenewTempBanNoLength() {
-        String arg = "ban renew 1";
+        assertEquals(question, result);
+        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("Player with id 1 has been unbanned.")));
+
+        verify(bannedUsersRepository).delete(targetBannedUserTemp);
     }
 
     @Test
     void testRenewTempBan() {
-        String arg = "ban renew 1 1d";
+        String command = "ban renew 1 1d";
+
+        BannedUser targetBannedUserTemp = spy(new BannedUser());
+
+        Date date = new Date();
+        targetBannedUserTemp.setBannedToDate(date);
+
+        lenient().when(bannedUsersRepository.findById(1L)).thenReturn(Optional.of(targetBannedUserTemp));
+
+        Output output = new Output();
+        BanCommand uut = new BanCommand(repositoryBundle, commService, applicationContext, bannedUsersRepository, userRepository);
+
+        List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
+
+        Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.add(Calendar.DAY_OF_MONTH, 1);
+        Date nextDay = calendar.getTime();
+
+        assertEquals(question, result);
+        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("Ban has been lengthened by 1d.")));
+        assertEquals(nextDay, targetBannedUserTemp.getBannedToDate());
+
+        verify(bannedUsersRepository).save(targetBannedUserTemp);
+
     }
 
     @Test
     void testRenewPermBan() {
-        String arg = "ban renew 2 1d";
+        String command = "ban renew 2 1d";
+        Output output = new Output();
+        BanCommand uut = new BanCommand(repositoryBundle, commService, applicationContext, bannedUsersRepository, userRepository);
+
+        List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
+
+        Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
+
+        assertEquals(question, result);
+        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("Can't renew permanent ban.")));
+
+        verifyNoInteractions(commService);
+        verifyNoInteractions(userRepository);
     }
 
+    @Test
+    void testRenewNotExistingBan() {
+        String command = "ban renew 3 1d";
+        Output output = new Output();
+        BanCommand uut = new BanCommand(repositoryBundle, commService, applicationContext, bannedUsersRepository, userRepository);
 
+        List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
+
+        Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
+
+        assertEquals(question, result);
+        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("Can't find player with that ban ID.")));
+
+        verifyNoInteractions(commService);
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    void testRenewTempBanNoLength() {
+        String command = "ban renew 1";
+        Output output = new Output();
+        BanCommand uut = new BanCommand(repositoryBundle, commService, applicationContext, bannedUsersRepository, userRepository);
+
+        List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
+
+        Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
+
+        assertEquals(question, result);
+        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("You must specify a ban renewal duration.")));
+
+        verifyNoInteractions(commService);
+        verifyNoInteractions(bannedUsersRepository);
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    void testRemoveNotExistingBan() {
+        String command = "ban remove 3";
+        Output output = new Output();
+        BanCommand uut = new BanCommand(repositoryBundle, commService, applicationContext, bannedUsersRepository, userRepository);
+
+        List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
+
+        Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
+
+        assertEquals(question, result);
+        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("Can't find player with that ban ID.")));
+
+        verifyNoInteractions(commService);
+        verifyNoInteractions(userRepository);
+        verify(bannedUsersRepository, never()).delete(any());
+    }
 }
