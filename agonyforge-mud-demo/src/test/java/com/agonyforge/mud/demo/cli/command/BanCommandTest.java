@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationContext;
@@ -417,6 +418,16 @@ public class BanCommandTest {
         verify(bannedUsersRepository).save(any());
 
         verify(commService).reloadUser(targetPrincipal);
+
+        ArgumentCaptor<BannedUser> userCaptor = ArgumentCaptor.forClass(BannedUser.class);
+        verify(bannedUsersRepository).save(userCaptor.capture());
+
+        BannedUser bannedUser = userCaptor.getValue();
+
+        String[] words = command.split("\\s+");
+        String reason = words.length < 6 ? "" : String.join(" ", Arrays.copyOfRange(words, 5, words.length));
+
+        assertEquals(bannedUser.getReason(), reason);
 
         verify(commService).sendToAll(eq(wsContext), any(Output.class), eq(ch));
     }

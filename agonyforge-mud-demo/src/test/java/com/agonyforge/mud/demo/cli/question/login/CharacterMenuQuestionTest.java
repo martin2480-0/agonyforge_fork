@@ -6,8 +6,10 @@ import com.agonyforge.mud.core.web.model.Input;
 import com.agonyforge.mud.core.web.model.Output;
 import com.agonyforge.mud.core.web.model.WebSocketContext;
 import com.agonyforge.mud.demo.cli.RepositoryBundle;
+import com.agonyforge.mud.demo.model.impl.BannedUser;
 import com.agonyforge.mud.demo.model.impl.CharacterComponent;
 import com.agonyforge.mud.demo.model.impl.MudCharacter;
+import com.agonyforge.mud.demo.model.impl.ReloadedUser;
 import com.agonyforge.mud.demo.model.repository.BannedUsersRepository;
 import com.agonyforge.mud.demo.model.repository.MudCharacterRepository;
 import com.agonyforge.mud.demo.model.repository.MudItemRepository;
@@ -15,16 +17,21 @@ import com.agonyforge.mud.demo.model.repository.ReloadedUsersRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationContext;
 
 import java.security.Principal;
+import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static com.agonyforge.mud.core.config.SessionConfiguration.MUD_CHARACTER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -66,12 +73,130 @@ public class CharacterMenuQuestionTest {
     @Mock
     ReloadedUsersRepository reloadedUsersRepository;
 
+    @Mock
+    ReloadedUser reloadedUser;
+
+    @Mock
+    BannedUser bannedUser;
+
     private final Random random = new Random();
 
     @BeforeEach
     void setUp() {
         lenient().when(repositoryBundle.getCharacterRepository()).thenReturn(characterRepository);
         lenient().when(repositoryBundle.getItemRepository()).thenReturn(itemRepository);
+    }
+
+    @Test
+    void testReloadReason(){
+        String principalName = "principal";
+        String reason = "spam";
+
+        when(webSocketContext.getPrincipal()).thenReturn(principal);
+        when(principal.getName()).thenReturn(principalName);
+        lenient().when(reloadedUsersRepository.findByReloadedUser_PrincipalName(principalName)).thenReturn(Optional.of(reloadedUser));
+        lenient().when(reloadedUser.getReason()).thenReturn(reason);
+
+
+        CharacterMenuQuestion uut = new CharacterMenuQuestion(
+            applicationContext,
+            repositoryBundle,
+            bannedUsersRepository,
+            reloadedUsersRepository);
+
+        Output result = uut.prompt(webSocketContext);
+
+        Optional<String> itemOptional = result.getOutput()
+            .stream()
+            .filter(line -> line.contains(reason))
+            .findFirst();
+
+        assertTrue(itemOptional.isPresent());
+        verify(reloadedUsersRepository).delete(reloadedUser);
+    }
+
+    @Test
+    void testBannedUserOneDay() throws InterruptedException {
+        SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm");
+
+        String principalName = "principal";
+        String reason = "spam";
+        String timeRemaining = "Time remaining: 1 day 5 hours";
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+
+        Date now = new Date();
+
+        Thread.sleep(10);
+
+        Date nextDay = new Date(now.getTime() + TimeUnit.DAYS.toMillis(1) + TimeUnit.HOURS.toMillis(5) + TimeUnit.MINUTES.toMillis(1));
+
+        calendar.add(Calendar.DAY_OF_MONTH, -1);
+        Date dayBefore = calendar.getTime();
+
+        when(webSocketContext.getPrincipal()).thenReturn(principal);
+        when(principal.getName()).thenReturn(principalName);
+        lenient().when(bannedUsersRepository.findByBannedUser_PrincipalName(principalName)).thenReturn(Optional.of(bannedUser));
+
+
+        lenient().when(bannedUser.getReason()).thenReturn(reason);
+        lenient().when(bannedUser.getBannedOn()).thenReturn(dayBefore);
+        lenient().when(bannedUser.getBannedToDate()).thenReturn(nextDay);
+
+        CharacterMenuQuestion uut = new CharacterMenuQuestion(
+            applicationContext,
+            repositoryBundle,
+            bannedUsersRepository,
+            reloadedUsersRepository);
+
+        Output result = uut.prompt(webSocketContext);
+
+        Optional<String> bannedTitleOptional = result.getOutput()
+            .stream()
+            .filter(line -> line.contains("You have been banned!"))
+            .findFirst();
+
+        assertTrue(bannedTitleOptional.isPresent());
+
+        Optional<String> TypeOptional = result.getOutput()
+            .stream()
+            .filter(line -> line.contains("temporary") || line.contains("permanent"))
+            .findFirst();
+
+        assertTrue(TypeOptional.isPresent());
+
+        String formattedStartDate = formatter.format(bannedUser.getBannedOn());
+
+        Optional<String> bannedOnDateOptional = result.getOutput()
+            .stream()
+            .filter(line -> line.contains(formattedStartDate))
+            .findFirst();
+
+        assertTrue(bannedOnDateOptional.isPresent());
+
+        String formattedBannedToDate = formatter.format(bannedUser.getBannedToDate());
+
+        Optional<String> bannedToDateOptional = result.getOutput()
+            .stream()
+            .filter(line -> line.contains(formattedBannedToDate))
+            .findFirst();
+
+        assertTrue(bannedToDateOptional.isPresent());
+
+        Optional<String> timeRemainingOptional = result.getOutput()
+            .stream()
+            .filter(line -> line.contains(timeRemaining))
+            .findFirst();
+
+        assertTrue(timeRemainingOptional.isPresent());
+
+        verify(reloadedUsersRepository, never()).delete(any());
+
+
     }
 
     @Test

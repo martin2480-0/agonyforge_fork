@@ -3,14 +3,14 @@ package com.agonyforge.mud.demo.cli.question.login;
 import com.agonyforge.mud.core.cli.Color;
 import com.agonyforge.mud.core.cli.Question;
 import com.agonyforge.mud.core.cli.Response;
-import com.agonyforge.mud.core.web.model.Input;
-import com.agonyforge.mud.core.web.model.Output;
-import com.agonyforge.mud.core.web.model.WebSocketContext;
-import com.agonyforge.mud.demo.cli.RepositoryBundle;
 import com.agonyforge.mud.core.cli.menu.impl.MenuItem;
 import com.agonyforge.mud.core.cli.menu.impl.MenuPane;
 import com.agonyforge.mud.core.cli.menu.impl.MenuPrompt;
 import com.agonyforge.mud.core.cli.menu.impl.MenuTitle;
+import com.agonyforge.mud.core.web.model.Input;
+import com.agonyforge.mud.core.web.model.Output;
+import com.agonyforge.mud.core.web.model.WebSocketContext;
+import com.agonyforge.mud.demo.cli.RepositoryBundle;
 import com.agonyforge.mud.demo.cli.question.BaseQuestion;
 import com.agonyforge.mud.demo.model.impl.BannedUser;
 import com.agonyforge.mud.demo.model.impl.ReloadedUser;
@@ -21,6 +21,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 import java.security.Principal;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -41,6 +42,29 @@ public class CharacterMenuQuestion extends BaseQuestion {
         this.reloadedUsersRepository = reloadedUsersRepository;
 
         menuPane.setPrompt(new MenuPrompt());
+    }
+
+    private static String getTimeRemaining(Date futureDate) {
+        Date now = new Date();
+        long differenceInMillis = futureDate.getTime() - now.getTime();
+
+        long days = TimeUnit.MILLISECONDS.toDays(differenceInMillis);
+        long hours = TimeUnit.MILLISECONDS.toHours(differenceInMillis) % 24;
+        long minutes = TimeUnit.MILLISECONDS.toMinutes(differenceInMillis) % 60;
+
+        StringBuilder timeRemaining = new StringBuilder();
+
+        if (days > 0) {
+            timeRemaining.append(days).append(days == 1 ? " day " : " days ");
+        }
+        if (hours > 0) {
+            timeRemaining.append(hours).append(hours == 1 ? " hour " : " hours ");
+        }
+        if (minutes > 0) {
+            timeRemaining.append(minutes).append(minutes == 1 ? " minute" : " minutes");
+        }
+
+        return "Time remaining: " + timeRemaining.toString().trim();
     }
 
     @Override
@@ -69,21 +93,22 @@ public class CharacterMenuQuestion extends BaseQuestion {
                 banReason = "Not given";
             }
 
-            menuPane.setTitle(new MenuTitle("You have been banned"));
+            menuPane.setTitle(new MenuTitle("You have been banned!"));
 
             menuPane.getItems().clear();
 
-            menuPane.getItems().add(new MenuItem("", String.format("Reason: %s",banReason)));
+            menuPane.getItems().add(new MenuItem("", String.format("Reason: %s", banReason)));
             menuPane.getItems().add(new MenuItem("", String.format("Type: %s", banType)));
             if (!bannedUser.isPermanent()) {
-                String startDate = bannedUser.getBannedOn().toString();
+                SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm");
 
-                String bannedToDate = bannedUser.getBannedToDate().toString();
+                String formattedStartDate = formatter.format(bannedUser.getBannedOn());
+                String formattedBannedToDate = formatter.format(bannedUser.getBannedToDate());
 
                 String timeRemaining = getTimeRemaining(bannedUser.getBannedToDate());
 
-                menuPane.getItems().add(new MenuItem("", String.format("Start date: %s",startDate)));
-                menuPane.getItems().add(new MenuItem("", String.format("End date: %s", bannedToDate)));
+                menuPane.getItems().add(new MenuItem("", String.format("Start date: %s", formattedStartDate)));
+                menuPane.getItems().add(new MenuItem("", String.format("End date: %s", formattedBannedToDate)));
                 menuPane.getItems().add(new MenuItem("", timeRemaining));
             }
             return menuPane.render(Color.WHITE, Color.BLACK);
@@ -95,31 +120,6 @@ public class CharacterMenuQuestion extends BaseQuestion {
         menuPane.setTitle(new MenuTitle("Your Characters"));
         return menuPane.render(Color.WHITE, Color.BLACK);
     }
-
-    private static String getTimeRemaining(Date futureDate){
-        Date now = new Date();
-
-        long differenceInMillis = futureDate.getTime() - now.getTime();
-
-        long days = TimeUnit.MILLISECONDS.toDays(differenceInMillis);
-        long hours = TimeUnit.MILLISECONDS.toHours(differenceInMillis) % 24;
-        long minutes = TimeUnit.MILLISECONDS.toMinutes(differenceInMillis) % 60;
-
-        StringBuilder timeRemaining = new StringBuilder();
-
-        if (days > 0) {
-            timeRemaining.append(days).append(" days ");
-        }
-        if (hours > 0) {
-            timeRemaining.append(hours).append(" hours ");
-        }
-        if (minutes > 0) {
-            timeRemaining.append(minutes).append(" minutes");
-        }
-
-        return "Time remaining: " + timeRemaining.toString().trim();
-    }
-
 
     @Override
     public Response answer(WebSocketContext wsContext, Input input) {
@@ -136,7 +136,7 @@ public class CharacterMenuQuestion extends BaseQuestion {
         String choice = input.getInput().toUpperCase();
         Optional<MenuItem> itemOptional = menuPane.getItems()
             .stream()
-            .map(i -> (MenuItem)i)
+            .map(i -> (MenuItem) i)
             .filter(i -> choice.equals(i.getKey()))
             .findFirst();
 
@@ -163,7 +163,7 @@ public class CharacterMenuQuestion extends BaseQuestion {
         menuPane.getItems().clear();
 
         if (reason != null && !reason.isEmpty()) {
-            menuPane.getItems().add(new MenuItem("", String.format("[red]%s",reason)));
+            menuPane.getItems().add(new MenuItem("", String.format("[red]%s", reason)));
         }
 
         menuPane.getItems().add(new MenuItem("N", "New Character"));

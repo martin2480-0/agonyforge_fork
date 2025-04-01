@@ -14,6 +14,7 @@ import com.agonyforge.mud.demo.service.CommService;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -176,7 +177,8 @@ public class BanCommand extends AbstractCommand {
                         return question;
                     }
 
-                    reason = String.join(" ", tokens.subList(5, tokens.size()));
+                    String[] words = input.getInput().split("\\s+");
+                    reason = words.length < 6 ? "" : String.join(" ", Arrays.copyOfRange(words, 5, words.length));
                 }
 
                 String principal = target.getCreatedBy();
