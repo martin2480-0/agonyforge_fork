@@ -39,11 +39,6 @@ public class ForceCommand extends AbstractCommand {
             return question;
         }
 
-        if (tokens.size() < 3) {
-            output.append("[default]What would you like to force them to do?");
-            return question;
-        }
-
         Optional<MudCharacter> targetOptional = findWorldCharacter(ch, tokens.get(1));
 
         if (targetOptional.isEmpty() || targetOptional.get().getPlayer() == null) {
@@ -53,10 +48,17 @@ public class ForceCommand extends AbstractCommand {
 
         MudCharacter target = targetOptional.get();
 
+        if (tokens.size() < 3) {
+            output.append("[default]What would you like to force them to do?");
+            return question;
+        }
+
+
         String fullCommand = Command.stripFirstWords(input.getInput(), 2);
         String commandName = fullCommand.split(" ")[0];
 
         Optional<CommandReference> commandReferenceOptional = commandRepository.findByNameIgnoreCase(commandName);
+
         if (commandReferenceOptional.isEmpty()) {
             output.append("[red]Can't find that command.");
             return question;
@@ -65,12 +67,13 @@ public class ForceCommand extends AbstractCommand {
         CommandReference commandReference = commandReferenceOptional.get();
 
         if (!commandReference.isCanBeForced()) {
-            output.append("[red]Can't force %s to do: %s", target.getCharacter().getName(), commandName);
+            output.append("[red]Can't force %s to %s", target.getCharacter().getName(), commandName);
             return question;
         }
 
         if (target.isFrozen() && !commandReference.isCanExecuteWhileFrozen()) {
             output.append("[red]Can't execute this command, %s is frozen.", target.getCharacter().getName());
+            return question;
         }
 
         output.append("[yellow]You forced %s to: %s",target.getCharacter().getName(), fullCommand);

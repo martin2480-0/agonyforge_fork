@@ -14,10 +14,12 @@ import com.agonyforge.mud.demo.service.CommService;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -66,6 +68,30 @@ public class BanCommand extends AbstractCommand {
     }
 
 
+    private static String getTimeRemaining(Date futureDate) {
+        Date now = new Date();
+        long differenceInMillis = futureDate.getTime() - now.getTime();
+
+        long days = TimeUnit.MILLISECONDS.toDays(differenceInMillis);
+        long hours = TimeUnit.MILLISECONDS.toHours(differenceInMillis) % 24;
+        long minutes = TimeUnit.MILLISECONDS.toMinutes(differenceInMillis) % 60;
+
+        StringBuilder timeRemaining = new StringBuilder();
+
+        if (days > 0) {
+            timeRemaining.append(days).append(days == 1 ? " day " : " days ");
+        }
+        if (hours > 0) {
+            timeRemaining.append(hours).append(hours == 1 ? " hour " : " hours ");
+        }
+        if (minutes > 0) {
+            timeRemaining.append(minutes).append(minutes == 1 ? " minute" : " minutes");
+        }
+
+        return "Time remaining: " + timeRemaining.toString().trim();
+    }
+
+
     // BAN add <user> PERM <důvod>
     // BAN add <user> TEMP <doba> <důvod>
     // BAN renew <ban_id> <doba>
@@ -103,6 +129,8 @@ public class BanCommand extends AbstractCommand {
 
             if ("list".equalsIgnoreCase(banAction)) {
 
+                SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm");
+
                 List<BannedUser> bannedUsers = bannedUsersRepository.findAllByOrderByBannedOnAsc();
 
                 output
@@ -114,16 +142,21 @@ public class BanCommand extends AbstractCommand {
                         bannedUser.getId(),
                         bannedUser.isPermanent() ? "Permanent Ban" : "Temporary Ban"));
 
+                    String formattedBannedOnDate = formatter.format(bannedUser.getBannedOn());
+                    output.append(String.format("Banned On: [red]%s\n", formattedBannedOnDate));
                     if (!bannedUser.isPermanent()) {
-                        output.append(String.format("[yellow]Banned Until[white]: [red]%s\n", bannedUser.getBannedToDate()));
+                        String formattedBannedToDate = formatter.format(bannedUser.getBannedToDate());
+                        output.append(String.format("Banned Until: [red]%s\n", formattedBannedToDate));
+                        output.append("Time remaining: %s", getTimeRemaining(bannedUser.getBannedToDate()));
                     }
+
                     String reason = bannedUser.getReason();
 
                     if (reason == null || reason.isEmpty()) {
                         reason = "No reason provided";
                     }
-                    output.append(String.format("[yellow]Reason[white]: [red]%s\n", reason));
-                    output.append(String.format("[yellow]Banned On[white]: [red]%s\n", bannedUser.getBannedOn()));
+                    output.append(String.format("Reason: [red]%s\n", reason));
+                    output.append("**************************************************");
                 });
 
 

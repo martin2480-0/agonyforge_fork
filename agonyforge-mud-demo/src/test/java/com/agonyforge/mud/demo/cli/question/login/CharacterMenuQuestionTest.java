@@ -142,7 +142,6 @@ public class CharacterMenuQuestionTest {
         when(principal.getName()).thenReturn(principalName);
         lenient().when(bannedUsersRepository.findByBannedUser_PrincipalName(principalName)).thenReturn(Optional.of(bannedUser));
 
-
         lenient().when(bannedUser.getReason()).thenReturn(reason);
         lenient().when(bannedUser.getBannedOn()).thenReturn(dayBefore);
         lenient().when(bannedUser.getBannedToDate()).thenReturn(nextDay);

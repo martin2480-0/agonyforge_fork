@@ -103,7 +103,7 @@ public class TransferCommandTest {
         lenient().when(target.getCharacter()).thenReturn(targetCharacter);
         lenient().when(targetCharacter.getName()).thenReturn("Target");
         lenient().when(targetCharacter.getPronoun()).thenReturn(Pronoun.THEY);
-        lenient().when(target.getPlayer()).thenReturn(chPlayer);
+        lenient().when(target.getPlayer()).thenReturn(targetPlayer);
     }
 
     @Test

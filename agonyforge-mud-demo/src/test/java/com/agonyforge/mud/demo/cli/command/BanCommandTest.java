@@ -5,6 +5,7 @@ import com.agonyforge.mud.core.web.model.Input;
 import com.agonyforge.mud.core.web.model.Output;
 import com.agonyforge.mud.core.web.model.WebSocketContext;
 import com.agonyforge.mud.demo.cli.RepositoryBundle;
+import com.agonyforge.mud.demo.cli.question.login.CharacterMenuQuestion;
 import com.agonyforge.mud.demo.model.constant.Pronoun;
 import com.agonyforge.mud.demo.model.impl.*;
 import com.agonyforge.mud.demo.model.repository.BannedUsersRepository;
@@ -21,7 +22,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationContext;
 
+import java.security.Principal;
+import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static com.agonyforge.mud.core.config.SessionConfiguration.MUD_CHARACTER;
 import static org.junit.jupiter.api.Assertions.*;
@@ -79,6 +83,8 @@ public class BanCommandTest {
     private BannedUser targetBannedUserTemp, targetBannedUserPerm;
 
     private String targetPrincipal;
+
+    private Principal principalInstance;
 
     @BeforeEach
     void setUp() {
@@ -217,7 +223,6 @@ public class BanCommandTest {
 
         assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("Whose ban would you like renew?")));
 
-
         assertEquals(question, result);
 
         verifyNoInteractions(commService);
@@ -244,8 +249,171 @@ public class BanCommandTest {
     }
 
     @Test
-    void testOneArgumentBanList() {
-        String arg = "ban list";
+    void testOneArgumentBanListTempBan() throws InterruptedException {
+        String command = "ban list";
+        SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm");
+        long userId = 100L;
+
+        String reason = "spam";
+        String timeRemaining = "Time remaining: 1 day 5 hours";
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+
+        Date now = new Date();
+
+        Thread.sleep(10);
+
+        Date nextDay = new Date(now.getTime() + TimeUnit.DAYS.toMillis(1) + TimeUnit.HOURS.toMillis(5) + TimeUnit.MINUTES.toMillis(1));
+
+        calendar.add(Calendar.DAY_OF_MONTH, -1);
+        Date dayBefore = calendar.getTime();
+
+        lenient().when(bannedUsersRepository.findAllByOrderByBannedOnAsc()).thenReturn(List.of(targetBannedUserTemp));
+
+        lenient().when(targetBannedUserTemp.getReason()).thenReturn(reason);
+        lenient().when(targetBannedUserTemp.getBannedOn()).thenReturn(dayBefore);
+        lenient().when(targetBannedUserTemp.getBannedToDate()).thenReturn(nextDay);
+        lenient().when(targetBannedUserTemp.getId()).thenReturn(userId);
+        lenient().when(targetBannedUserTemp.isPermanent()).thenReturn(false);
+
+        Output output = new Output();
+        BanCommand uut = new BanCommand(repositoryBundle, commService, applicationContext, bannedUsersRepository, userRepository);
+
+        List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
+
+        Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
+
+        assertEquals(question, result);
+
+        Optional<String> banListTitleOptional = output.getOutput()
+            .stream()
+            .filter(line -> line.contains("Banned Users:"))
+            .findFirst();
+
+        assertTrue(banListTitleOptional.isPresent());
+
+        Optional<String> bannedUserIdOptional = output.getOutput()
+            .stream()
+            .filter(line -> line.contains(String.valueOf(userId)))
+            .findFirst();
+
+        assertTrue(bannedUserIdOptional.isPresent());
+
+        Optional<String> TypeOptional = output.getOutput()
+            .stream()
+            .filter(line -> line.contains("Temporary Ban"))
+            .findFirst();
+
+        assertTrue(TypeOptional.isPresent());
+
+        String formattedStartDate = formatter.format(targetBannedUserTemp.getBannedOn());
+
+        Optional<String> bannedOnDateOptional = output.getOutput()
+            .stream()
+            .filter(line -> line.contains(formattedStartDate))
+            .findFirst();
+
+        assertTrue(bannedOnDateOptional.isPresent());
+
+        String formattedBannedToDate = formatter.format(targetBannedUserTemp.getBannedToDate());
+
+        Optional<String> bannedToDateOptional = output.getOutput()
+            .stream()
+            .filter(line -> line.contains(formattedBannedToDate))
+            .findFirst();
+
+        assertTrue(bannedToDateOptional.isPresent());
+
+        Optional<String> timeRemainingOptional = output.getOutput()
+            .stream()
+            .filter(line -> line.contains(timeRemaining))
+            .findFirst();
+
+        assertTrue(timeRemainingOptional.isPresent());
+
+    }
+
+    @Test
+    void testOneArgumentBanListPermBan() {
+        String command = "ban list";
+        SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm");
+        long userId = 100L;
+
+        String reason = "spam";
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+
+        calendar.add(Calendar.DAY_OF_MONTH, -1);
+        Date dayBefore = calendar.getTime();
+
+        lenient().when(bannedUsersRepository.findAllByOrderByBannedOnAsc()).thenReturn(List.of(targetBannedUserPerm));
+
+        lenient().when(targetBannedUserPerm.getReason()).thenReturn(reason);
+        lenient().when(targetBannedUserPerm.getBannedOn()).thenReturn(dayBefore);
+        lenient().when(targetBannedUserPerm.getId()).thenReturn(userId);
+        lenient().when(targetBannedUserPerm.isPermanent()).thenReturn(true);
+
+        Output output = new Output();
+        BanCommand uut = new BanCommand(repositoryBundle, commService, applicationContext, bannedUsersRepository, userRepository);
+
+        List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
+
+        Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
+
+        assertEquals(question, result);
+
+        Optional<String> banListTitleOptional = output.getOutput()
+            .stream()
+            .filter(line -> line.contains("Banned Users:"))
+            .findFirst();
+
+        assertTrue(banListTitleOptional.isPresent());
+
+        Optional<String> bannedUserIdOptional = output.getOutput()
+            .stream()
+            .filter(line -> line.contains(String.valueOf(userId)))
+            .findFirst();
+
+        assertTrue(bannedUserIdOptional.isPresent());
+
+        Optional<String> TypeOptional = output.getOutput()
+            .stream()
+            .filter(line -> line.contains("Permanent Ban"))
+            .findFirst();
+
+        assertTrue(TypeOptional.isPresent());
+
+        String formattedStartDate = formatter.format(targetBannedUserPerm.getBannedOn());
+
+        Optional<String> bannedOnDateOptional = output.getOutput()
+            .stream()
+            .filter(line -> line.contains(formattedStartDate))
+            .findFirst();
+
+        assertTrue(bannedOnDateOptional.isPresent());
+
+        Optional<String> bannedToDateOptional = output.getOutput()
+            .stream()
+            .filter(line -> line.contains("Banned Until:"))
+            .findFirst();
+
+        assertTrue(bannedToDateOptional.isEmpty());
+
+        Optional<String> timeRemainingOptional = output.getOutput()
+            .stream()
+            .filter(line -> line.contains("Time remaining: "))
+            .findFirst();
+
+        assertTrue(timeRemainingOptional.isEmpty());
+
     }
 
     @Test
