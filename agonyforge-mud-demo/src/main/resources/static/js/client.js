@@ -91,11 +91,27 @@ function connect() {
             },
             {});
 
+            // reload of site after ban, kick, slay
             stompClient.subscribe('/user/queue/reload', function (message) {
                 if (message.body === "reload") {
                     window.location.reload();
                 }
                 });
+
+            // triggers a file chooser
+            stompClient.subscribe('/topic/upload', function (message) {
+                if (message.body === "upload") {
+                    document.getElementById("fileInput").click();
+                }
+            });
+
+            // triggers a file download (character or map)
+            stompClient.subscribe('/topic/download', function (message) {
+                if (message.body === "download") {
+                    window.location.href = "/download"; // TODO fix
+                }
+            });
+
         },
         function(event) { // errorCallback
             console.log(`Connection error: ${event.code} => ${event.reason}`);

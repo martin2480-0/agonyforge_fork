@@ -89,7 +89,17 @@ public class WebSocketController {
         return "reload";
     }
 
+    @MessageMapping("/upload")
+    @SendToUser(value = "/queue/upload")
+    public String sendUDownloadSignal() {
+        return "download";
+    }
 
+    @MessageMapping("/download")
+    @SendToUser(value = "/queue/download")
+    public String sendUploadSignal() {
+        return "upload";
+    }
 
     @MessageMapping("/input")
     @SendToUser(value = "/queue/output", broadcast = false)

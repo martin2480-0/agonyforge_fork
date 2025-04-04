@@ -16,6 +16,8 @@
             <input type="text" id="input" autocomplete="off" autofocus>
         </form>
     </section>
+
+    <input type="file" id="fileInput" style="display: none;" onchange="uploadFile()">
 </@secure>
 <@anonymous "OAUTH2_USER">
     <main class="container-fluid">

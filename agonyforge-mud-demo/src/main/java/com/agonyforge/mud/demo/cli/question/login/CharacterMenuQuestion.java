@@ -23,6 +23,7 @@ import org.springframework.stereotype.Component;
 import java.security.Principal;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -114,7 +115,6 @@ public class CharacterMenuQuestion extends BaseQuestion {
             return menuPane.render(Color.WHITE, Color.BLACK);
         }
 
-
         populateMenuItems(principal, reloadReason);
 
         menuPane.setTitle(new MenuTitle("Your Characters"));
@@ -144,7 +144,10 @@ public class CharacterMenuQuestion extends BaseQuestion {
             output.append("[red]Please choose one of the menu options.");
         } else if ("N".equals(choice)) {
             nextQuestion = "characterNameQuestion";
-        } else {
+        } else if ("I".equals(choice)) {
+            nextQuestion = "characterImportQuestion";
+        }
+        else {
             MenuItem item = itemOptional.get();
             wsContext.getAttributes().put(MUD_CHARACTER, item.getItem());
             nextQuestion = "characterViewQuestion";
@@ -167,6 +170,7 @@ public class CharacterMenuQuestion extends BaseQuestion {
         }
 
         menuPane.getItems().add(new MenuItem("N", "New Character"));
+        menuPane.getItems().add(new MenuItem("I", "Import Character"));
 
         getRepositoryBundle().getCharacterRepository().findByPlayerUsername(principal.getName())
             .forEach(ch -> {
