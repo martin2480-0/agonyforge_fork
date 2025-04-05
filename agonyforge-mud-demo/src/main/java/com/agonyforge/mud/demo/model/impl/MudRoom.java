@@ -48,6 +48,14 @@ public class MudRoom extends Persistent {
         public void setDestinationId(Long destinationId) {
             this.destinationId = destinationId;
         }
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(Long id) {
+            this.id = id;
+        }
     }
 
     public Long getId() {
@@ -95,6 +103,10 @@ public class MudRoom extends Persistent {
             .stream()
             .sorted()
             .collect(Collectors.toList());
+    }
+
+    public Map<String, Exit> getExitsMap(){
+        return exits;
     }
 
     public Exit getExit(String direction) {

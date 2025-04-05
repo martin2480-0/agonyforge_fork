@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Set;
 
 public class ItemDTO {
+    private Long itemId;
     private String shortDescription;
     private String longDescription;
     private Set<String> itemNames;
@@ -14,7 +15,8 @@ public class ItemDTO {
 
     }
 
-    public ItemDTO(String shortDescription, String longDescription, Set<String> itemNames, List<String> wearSlots, String wearMode) {
+    public ItemDTO(Long ItemId, String shortDescription, String longDescription, Set<String> itemNames, List<String> wearSlots, String wearMode) {
+        this.itemId = ItemId;
         this.shortDescription = shortDescription;
         this.longDescription = longDescription;
         this.itemNames = itemNames;
@@ -60,5 +62,13 @@ public class ItemDTO {
 
     public void setWearMode(String wearMode) {
         this.wearMode = wearMode;
+    }
+
+    public Long getItemId() {
+        return itemId;
+    }
+
+    public void setItemId(Long itemId) {
+        this.itemId = itemId;
     }
 }

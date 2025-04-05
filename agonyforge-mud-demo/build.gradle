@@ -25,6 +25,8 @@ dependencies {
     implementation 'com.hazelcast:hazelcast:5.5.0'
     implementation 'ch.qos.logback.access:logback-access-tomcat:2.0.6'
 
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.17.0'
+
     implementation 'org.webjars:webjars-locator:0.52'
     implementation 'org.webjars:bootstrap:5.3.3'
     implementation 'org.webjars:jquery:3.7.1'
@@ -41,6 +43,8 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'org.junit.jupiter:junit-jupiter-params'
     testImplementation 'org.junit.platform:junit-platform-launcher'
+
+
 }
 
 java {

@@ -4,12 +4,12 @@ import com.agonyforge.mud.demo.cli.RepositoryBundle;
 import com.agonyforge.mud.demo.model.constant.Effort;
 import com.agonyforge.mud.demo.model.constant.Stat;
 import com.agonyforge.mud.demo.model.constant.WearSlot;
-import com.agonyforge.mud.demo.model.export.dataTransferObjects.CharacterDTO;
-import com.agonyforge.mud.demo.model.export.dataTransferObjects.ItemDTO;
-import com.agonyforge.mud.demo.model.impl.MudCharacter;
-import com.agonyforge.mud.demo.model.impl.MudItem;
-import com.agonyforge.mud.demo.model.repository.UserRepository;
+import com.agonyforge.mud.demo.model.export.dataTransferObjects.*;
+import com.agonyforge.mud.demo.model.impl.*;
 import com.agonyforge.mud.demo.service.CommService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -29,7 +29,8 @@ public class ImportExportService {
         this.commService = commService;
     }
 
-    public CharacterDTO exportCharacter(MudCharacter ch) {
+    public String exportCharacter(MudCharacter ch) throws JsonProcessingException {
+        Long id = ch.getCharacter().getId();
         String characterName = ch.getCharacter().getName();
         int hitPoints = ch.getCharacter().getHitPoints();
         int maxHitPoints = ch.getCharacter().getMaxHitPoints();
@@ -41,9 +42,14 @@ public class ImportExportService {
         Map<String, Integer> efforts = exportEfforts(ch);
         Map<String, Integer> stats = exportStats(ch);
 
-        return new CharacterDTO(
+        List<Long> itemIds = items.stream().map(ItemDTO::getItemId).collect(Collectors.toList());
+
+        CharacterDTO characterDTO = new CharacterDTO(id,
             characterName, hitPoints, maxHitPoints, defense,
-            profession, species, pronoun, items, efforts, stats);
+            profession, species, pronoun, itemIds, efforts, stats);
+
+        ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
+        return yamlMapper.writeValueAsString(characterDTO);
     }
 
     private Map<String, Integer> exportEfforts(MudCharacter ch) {
@@ -75,12 +81,12 @@ public class ImportExportService {
 
         List<ItemDTO> itemsDTOs = new ArrayList<>();
         held.forEach(item -> {
-            ItemDTO itemDTO = createItemDTO(item);
+            ItemDTO itemDTO = createItemDTO(item.getItem());
             itemsDTOs.add(itemDTO);
         });
 
         held.forEach(item -> {
-            ItemDTO itemDTO = createItemDTO(item);
+            ItemDTO itemDTO = createItemDTO(item.getItem());
             itemsDTOs.add(itemDTO);
         });
 
@@ -88,24 +94,87 @@ public class ImportExportService {
 
     }
 
-    private ItemDTO createItemDTO(MudItem item) {
-        String shortDescription = item.getItem().getShortDescription();
-        String longDescription = item.getItem().getLongDescription();
-        Set<String> nameList = item.getItem().getNameList();
-        List<String> wearSlots = item.getItem().getWearSlots().stream().map(WearSlot::getName).toList();
-        String wearMode = item.getItem().getWearMode().toString();
-        return new ItemDTO(shortDescription, longDescription, nameList, wearSlots, wearMode);
+    private ItemDTO createItemDTO(ItemComponent itemComponent) {
+        Long id = itemComponent.getId();
+        String shortDescription = itemComponent.getShortDescription();
+        String longDescription = itemComponent.getLongDescription();
+        Set<String> nameList = itemComponent.getNameList();
+        List<String> wearSlots = itemComponent.getWearSlots().stream().map(WearSlot::getName).toList();
+        String wearMode = itemComponent.getWearMode().toString();
+
+        return new ItemDTO(id, shortDescription, longDescription, nameList, wearSlots, wearMode);
     }
 
-    private void exportAllItems() {
-        // TODO finish
+    private String exportAllItems() throws JsonProcessingException {
+        List<MudItemTemplate> items = repositoryBundle.getItemPrototypeRepository().findAll();
+
+        List<ItemDTO> itemDTOS = items.stream().map(
+            item -> createItemDTO(item.getItem()))
+            .collect(Collectors.toList());
+
+        ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
+        return yamlMapper.writeValueAsString(itemDTOS);
+
     }
 
-    public boolean importCharacter(Principal principal, String yamlFileContent) {
+    public boolean importCharacter(Principal principal, String yamlFileContent) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
+        MapExportDTO mapDTO = objectMapper.readValue(yamlFileContent, MapExportDTO.class);
         return false;
     }
 
-    public void exportMap(){
+    public boolean importItem(ItemDTO itemDTO){
+        return false;
+    }
+
+    public String exportMapAsYaml() throws JsonProcessingException {
+        List<MudRoom> rooms = repositoryBundle.getRoomRepository().findAll();
+
+        List<MapExportDTO.RoomDTO> roomDTOs = new ArrayList<>();
+        List<ItemDTO> items = new ArrayList<>();
+        List<CharacterDTO> characters = new ArrayList<>();
+
+
+        rooms.forEach(room -> {
+            Long id = room.getId();
+            Long zoneId = room.getZoneId();
+            String description = room.getDescription();
+
+            List<MapExportDTO.ExitDTO> exitDTOs = new ArrayList<>();
+            List<ItemDTO> roomItems = new ArrayList<>();
+            List<CharacterDTO> roomCharacters = new ArrayList<>(); // for now stays empty until NPCs are finished
+            Set<String> flags = new HashSet<>();
+
+            room.getExitsMap().forEach((direction, exitInstance) -> {
+                MapExportDTO.ExitDTO exitDTO = new MapExportDTO.ExitDTO(direction, exitInstance.getDestinationId());
+                exitDTOs.add(exitDTO);
+            });
+
+            repositoryBundle.getItemRepository().findByLocationRoom(room).forEach(item -> {
+                ItemDTO itemDTO = createItemDTO(item.getItem());
+                roomItems.add(itemDTO);
+            });
+
+            List<Long> roomItemIds = roomItems.stream().map(ItemDTO::getItemId).toList();
+
+            List<Long> roomCharacterIds = roomCharacters.stream().map(CharacterDTO::getId).toList();
+
+
+            room.getFlags().forEach(flag -> {
+                flags.add(flag.getDescription());
+            });
+
+            MapExportDTO.RoomDTO roomDTO = new MapExportDTO.RoomDTO(id, zoneId, description, exitDTOs, roomItemIds, roomCharacterIds, flags);
+            roomDTOs.add(roomDTO);
+
+            items.addAll(roomItems);
+            characters.addAll(roomCharacters);
+
+        });
+        MapExportDTO mapExportDTO = new MapExportDTO(roomDTOs, characters ,items);
+
+        ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
+        return yamlMapper.writeValueAsString(mapExportDTO);
 
     }
 
