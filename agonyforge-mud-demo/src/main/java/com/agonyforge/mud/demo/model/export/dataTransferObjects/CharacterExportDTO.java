@@ -4,8 +4,8 @@ import java.util.List;
 
 public class CharacterExportDTO {
 
-    CharacterDTO character;
-    List<ItemDTO> items;
+    private CharacterDTO character;
+    private List<ItemDTO> items;
 
     public CharacterExportDTO() {}
 

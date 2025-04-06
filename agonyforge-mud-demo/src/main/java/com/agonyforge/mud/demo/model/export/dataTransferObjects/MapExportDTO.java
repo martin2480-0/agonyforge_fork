@@ -1,8 +1,9 @@
 package com.agonyforge.mud.demo.model.export.dataTransferObjects;
 
-import java.util.ArrayList;
+import com.agonyforge.mud.demo.model.constant.Direction;
+import com.agonyforge.mud.demo.model.constant.RoomFlag;
+
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public class MapExportDTO {
@@ -41,18 +42,20 @@ public class MapExportDTO {
     }
 
     public static class RoomDTO {
-        public Long id;
-        public Long zoneId;
-        public String description;
-        public List<ExitDTO> exits;
-        public List<Long> itemIds;
-        public List<Long> characterIds; // means NPCs
-        public Set<String> flags;
+        private Long roomId;
+        private Long zoneId;
+        private String name;
+        private String description;
+        private List<ExitDTO> exits;
+        private List<Long> itemIds;
+        private List<Long> characterIds; // means NPCs
+        private Set<RoomFlag> flags;
 
-        public RoomDTO(Long id, Long zoneId, String description, List<ExitDTO> exits,
-                       List<Long> itemIds, List<Long> characterIds, Set<String> flags) {
-            this.id = id;
+        public RoomDTO(Long id, Long zoneId,String name, String description, List<ExitDTO> exits,
+                       List<Long> itemIds, List<Long> characterIds, Set<RoomFlag> flags) {
+            this.roomId = id;
             this.zoneId = zoneId;
+            this.name = name;
             this.description = description;
             this.exits = exits;
             this.itemIds = itemIds;
@@ -60,12 +63,12 @@ public class MapExportDTO {
             this.flags = flags;
         }
 
-        public Long getId() {
-            return id;
+        public Long getRoomId() {
+            return roomId;
         }
 
-        public void setId(Long id) {
-            this.id = id;
+        public void setRoomId(Long roomId) {
+            this.roomId = roomId;
         }
 
         public Long getZoneId() {
@@ -108,30 +111,51 @@ public class MapExportDTO {
             this.characterIds = characterIds;
         }
 
-        public Set<String> getFlags() {
+        public Set<RoomFlag> getFlags() {
             return flags;
         }
 
-        public void setFlags(Set<String> flags) {
+        public void setFlags(Set<RoomFlag> flags) {
             this.flags = flags;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
         }
     }
 
     public static class ExitDTO {
-        public String direction;
+        public Direction direction;
         public Long destinationRoomId;
 
-        public ExitDTO(String direction, Long destinationRoomId) {
+        public ExitDTO(Direction direction, Long destinationRoomId) {
             this.direction = direction;
             this.destinationRoomId = destinationRoomId;
         }
 
-        public String getDirection() {
+        public ExitDTO(String direction, Long destinationRoomId) {
+            this.direction = Direction.fromValue(direction);
+            this.destinationRoomId = destinationRoomId;
+        }
+
+        public Direction getDirection() {
             return direction;
         }
 
         public Long getDestinationRoomId() {
             return destinationRoomId;
+        }
+
+        public void setDirection(Direction direction) {
+            this.direction = direction;
+        }
+
+        public void setDestinationRoomId(Long destinationRoomId) {
+            this.destinationRoomId = destinationRoomId;
         }
     }
 }

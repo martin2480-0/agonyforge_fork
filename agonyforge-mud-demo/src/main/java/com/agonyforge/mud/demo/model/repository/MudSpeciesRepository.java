@@ -6,4 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface MudSpeciesRepository extends JpaRepository<MudSpecies, Long> {
+
+    MudSpecies getMudSpeciesByName(String species);
 }

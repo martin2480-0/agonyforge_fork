@@ -2,6 +2,8 @@ package com.agonyforge.mud.demo.model.constant;
 
 import com.agonyforge.mud.demo.model.util.BaseEnumSetConverter;
 import com.agonyforge.mud.demo.model.util.PersistentEnum;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum WearSlot implements PersistentEnum {
     FINGER_LEFT("left finger", "worn on left finger"),
@@ -32,12 +34,23 @@ public enum WearSlot implements PersistentEnum {
         this.phrase = phrase;
     }
 
+    @JsonValue
     public String getName() {
         return name;
     }
 
     public String getPhrase() {
         return phrase;
+    }
+
+    @JsonCreator
+    public static WearSlot fromValue(String value) {
+        for (WearSlot wearSlot : values()) {
+            if (wearSlot.getName().equalsIgnoreCase(value)) {
+                return wearSlot;
+            }
+        }
+        throw new IllegalArgumentException("Unknown wear slot: " + value);
     }
 
     public static class Converter extends BaseEnumSetConverter<WearSlot> {

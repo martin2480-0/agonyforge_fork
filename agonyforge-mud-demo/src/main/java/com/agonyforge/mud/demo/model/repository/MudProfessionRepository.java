@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface MudProfessionRepository extends JpaRepository<MudProfession, Long> {
+    MudProfession getMudProfessionByName(String profession);
 }

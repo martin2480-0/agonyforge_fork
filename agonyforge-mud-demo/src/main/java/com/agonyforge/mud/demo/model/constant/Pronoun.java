@@ -1,5 +1,8 @@
 package com.agonyforge.mud.demo.model.constant;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 public enum Pronoun {
     HE("he", "him", "his", "himself", false),
     SHE("she", "her", "her", "herself", false),
@@ -24,6 +27,21 @@ public enum Pronoun {
         this.possessive = possessive;
         this.reflexive = reflexive;
         this.plural = plural;
+    }
+
+    @JsonCreator
+    public static Pronoun fromValue(String value) {
+        for (Pronoun pronoun : values()) {
+            if (pronoun.format().equalsIgnoreCase(value)) {
+                return pronoun;
+            }
+        }
+        throw new IllegalArgumentException("Unknown pronoun: " + value);
+    }
+
+    @JsonValue
+    public String format() {
+        return String.format("%s/%s", subject, object);
     }
 
     public String getSubject() {
