@@ -111,7 +111,12 @@ function connect() {
             // triggers a file download (character, item or map)
             stompClient.subscribe('/user/queue/download', function (message) {
                 if (message.body === "download") {
-                    window.location.href = "/download"; // TODO fix
+                    const link = document.createElement("a");
+                    link.href = "/download";
+                    link.download = "";
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
                 }
             });
 
