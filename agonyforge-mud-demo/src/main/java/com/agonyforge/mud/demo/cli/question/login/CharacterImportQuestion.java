@@ -12,6 +12,7 @@ import com.agonyforge.mud.core.web.model.Output;
 import com.agonyforge.mud.core.web.model.WebSocketContext;
 import com.agonyforge.mud.demo.cli.RepositoryBundle;
 import com.agonyforge.mud.demo.cli.question.BaseQuestion;
+import com.agonyforge.mud.demo.service.CommService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
@@ -22,14 +23,16 @@ import java.util.Optional;
 @Component
 public class CharacterImportQuestion extends BaseQuestion {
     private final MenuPane menuPane = new MenuPane();
+    private final CommService commService;
 
     @Autowired
     public CharacterImportQuestion(ApplicationContext applicationContext,
-                                 RepositoryBundle repositoryBundle) {
+                                   RepositoryBundle repositoryBundle, CommService commService) {
         super(applicationContext, repositoryBundle);
-
+        this.commService = commService;
 
         menuPane.setPrompt(new MenuPrompt());
+
     }
 
     private void populateMenuItems() {
@@ -65,10 +68,8 @@ public class CharacterImportQuestion extends BaseQuestion {
         if (itemOptional.isEmpty()) {
             output.append("[red]Please choose one of the menu options.");
         } else if ("1".equals(choice)) {
-            // TODO load a character file from client
-            //MenuItem item = itemOptional.get();
-            //wsContext.getAttributes().put(MUD_CHARACTER, item.getItem());
-            nextQuestion = "characterViewQuestion";
+            commService.triggerUpload(wsContext.getPrincipal().getName(), "character");
+            nextQuestion = "characterImportQuestion";
         } else if ("B".equals(choice)) {
             nextQuestion = "characterMenuQuestion";
         }

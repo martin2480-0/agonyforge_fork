@@ -135,6 +135,14 @@ public class CommService extends EchoService {
         simpMessagingTemplate.convertAndSendToUser(principal, "/queue/reload", "reload");
     }
 
+    public void triggerDownload(){
+
+    }
+
+    public void triggerUpload(String principal, String type){
+        simpMessagingTemplate.convertAndSendToUser(principal, "/queue/upload", type);
+    }
+
     /**
      * Send a message to the provided list of characters.
      *

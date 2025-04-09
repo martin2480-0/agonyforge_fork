@@ -123,7 +123,7 @@ public class ImportExportService {
 
     }
     @Transactional
-    public boolean importCharacter(Principal principal, String yamlFileContent) throws JsonProcessingException {
+    public boolean importCharacter(String principal, String yamlFileContent) throws JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
         MapExportDTO mapDTO = objectMapper.readValue(yamlFileContent, MapExportDTO.class);
         return false;

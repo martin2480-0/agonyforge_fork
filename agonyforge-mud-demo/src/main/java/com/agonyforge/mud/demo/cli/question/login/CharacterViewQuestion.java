@@ -59,6 +59,7 @@ public class CharacterViewQuestion extends BaseQuestion {
 
             output.append("[green]P[black]) Play as this character");
             output.append("[red]D[black]) Delete this character");
+            output.append("[yellow]E[black]) Export this character");
             output.append("[dwhite]B[black]) Go back");
             output.append("[black]Please [white]make your selection[black]: ");
         }
@@ -105,7 +106,13 @@ public class CharacterViewQuestion extends BaseQuestion {
             }
         } else if ("D".equalsIgnoreCase(input.getInput())) {
             next = getQuestion("characterDeleteQuestion");
-        } else if ("B".equalsIgnoreCase(input.getInput())) {
+
+        } else if ("E".equalsIgnoreCase(input.getInput())) {
+            next = getQuestion("characterViewQuestion");
+            commService.triggerDownload();
+        }
+
+        else if ("B".equalsIgnoreCase(input.getInput())) {
             next = getQuestion("characterMenuQuestion");
         } else {
             output.append("[red]Unknown selection. Please try again.");

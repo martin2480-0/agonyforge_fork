@@ -3,6 +3,7 @@ package com.agonyforge.mud.core.web.controller;
 import com.agonyforge.mud.core.cli.OutputLoader;
 import com.agonyforge.mud.core.cli.Question;
 import com.agonyforge.mud.core.cli.Response;
+import com.agonyforge.mud.core.web.FileTransferDTO;
 import com.agonyforge.mud.core.web.model.Input;
 import com.agonyforge.mud.core.web.model.Output;
 import com.agonyforge.mud.core.web.model.WebSocketContext;
@@ -13,16 +14,19 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
 import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.messaging.simp.annotation.SubscribeMapping;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Base64;
 import java.util.Map;
+import java.util.UUID;
 
 import static com.agonyforge.mud.core.config.RemoteIpHandshakeInterceptor.SESSION_REMOTE_IP_KEY;
 import static com.agonyforge.mud.core.config.SessionConfiguration.MUD_QUESTION;
@@ -37,6 +41,10 @@ public class WebSocketController {
     private final WebSocketContextAware webSocketContextAware;
     private final Question initialQuestion;
     private Output greeting;
+
+    final private String tmpDir = System.getProperty("java.io.tmpdir");
+    final private Path agonyForgePath = Paths.get(tmpDir, "agonyforge");
+
 
     @Autowired
     public WebSocketController(ApplicationContext applicationContext,
@@ -91,15 +99,50 @@ public class WebSocketController {
 
     @MessageMapping("/upload")
     @SendToUser(value = "/queue/upload")
-    public String sendUDownloadSignal() {
+    public String sendUploadSignal(String type) {
         return "download";
     }
 
     @MessageMapping("/download")
     @SendToUser(value = "/queue/download")
-    public String sendUploadSignal() {
-        return "upload";
+    public String sendDownloadSignal(String type) {
+        return "upload;" + type;
     }
+
+    @MessageMapping("/import")
+    @SendToUser("/queue/import")
+    public Output handleFileUpload(FileTransferDTO message, @Headers Map<String, Object> headers) {
+        WebSocketContext wsContext;
+
+        try {
+            wsContext = WebSocketContext.build(headers);
+            webSocketContextAware.setWebSocketContext(wsContext);
+        } catch (IllegalStateException e) {
+            LOGGER.error("Error building WebSocketContext: {}", e.getMessage());
+            return new Output("[red]Oops! Something went wrong. The error has been reported. Please try again.");
+        }
+
+        try {
+            byte[] data = Base64.getDecoder().decode(message.getBase64Content());
+
+            String principal = wsContext.getPrincipal().getName();
+
+            String type = message.getType();
+
+            String fileName = String.format("upload_%s_%s_%s.json", principal, type, UUID.randomUUID());
+
+            Path filePath = agonyForgePath.resolve(fileName);
+
+            Files.createDirectories(agonyForgePath);
+
+            Files.write(filePath, data);
+        }catch (IOException e){
+            LOGGER.error("Error writing file: {}", e.getMessage());
+        }
+
+        return new Output();
+    }
+
 
     @MessageMapping("/input")
     @SendToUser(value = "/queue/output", broadcast = false)

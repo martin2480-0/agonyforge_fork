@@ -1,6 +1,8 @@
 let socket = null;
 let stompClient = null;
 
+let uploadedFileMudType = null;
+
 const scrollBackLength = 1000;
 
 const commandHistory = [];
@@ -64,6 +66,8 @@ $(document).on("keyup", function(event) {
     }
 });
 
+
+
 function connect() {
     const token = $("meta[name='_csrf']").attr("content");
     const header = $("meta[name='_csrf_header']").attr("content");
@@ -91,7 +95,7 @@ function connect() {
             },
             {});
 
-            // reload of site after ban, kick, slay
+            // reload of site after ban, kick, slay and import
             stompClient.subscribe('/user/queue/reload', function (message) {
                 if (message.body === "reload") {
                     window.location.reload();
@@ -99,18 +103,38 @@ function connect() {
                 });
 
             // triggers a file chooser
-            stompClient.subscribe('/topic/upload', function (message) {
-                if (message.body === "upload") {
-                    document.getElementById("fileInput").click();
-                }
+            stompClient.subscribe('/user/queue/upload', function (message) {
+                uploadedFileMudType = message.body;
+                document.getElementById("fileInput").click();
             });
 
-            // triggers a file download (character or map)
-            stompClient.subscribe('/topic/download', function (message) {
+            // triggers a file download (character, item or map)
+            stompClient.subscribe('/user/queue/download', function (message) {
                 if (message.body === "download") {
                     window.location.href = "/download"; // TODO fix
                 }
             });
+
+            // triggers when file is uploaded
+            $("#fileInput").on("change", function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const base64 = evt.target.result.split(",")[1];
+
+                    const uploadMessage = {
+                        filename: file.name,
+                        contentType: file.type || "application/octet-stream",
+                        base64Content: base64,
+                        type: uploadedFileMudType
+                    };
+
+                    stompClient.send("/queue/import", {}, JSON.stringify(uploadMessage));
+                };
+            });
+
 
         },
         function(event) { // errorCallback
