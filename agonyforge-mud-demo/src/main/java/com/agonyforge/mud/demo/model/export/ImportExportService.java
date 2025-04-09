@@ -13,6 +13,10 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.Principal;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -23,6 +27,8 @@ public class ImportExportService {
     private final RepositoryBundle repositoryBundle;
     private final CommService commService;
     private final RoleRepository roleRepository;
+    final private String tmpDir = System.getProperty("java.io.tmpdir");
+    Path agonyForgePath = Paths.get(tmpDir, "agonyforge");
 
     @Autowired
     public ImportExportService(RepositoryBundle repositoryBundle, CommService commService, RoleRepository roleRepository) {
@@ -372,6 +378,46 @@ public class ImportExportService {
 
     }
 
+    public void writeYamlToFile(String yamlFileContent, String principal, String type) throws IOException {
+        String fileName = String.format("upload_%s_%s_%s.json", principal, type, UUID.randomUUID());
+
+        Path filePath = agonyForgePath.resolve(fileName);
+
+        Files.createDirectories(agonyForgePath);
+
+        Files.write(filePath, yamlFileContent.getBytes());
+    }
+    
+    public void export(String type, Principal principal, MudCharacter ch) throws IOException {
+        
+        switch (type){
+            case "items" -> {
+                String content = exportAllItemsAsYAML();
+                writeYamlToFile(content, principal.getName(), "items");
+            }
+            case "character" -> {
+                String content = exportCharacterAsYAML(ch);
+                writeYamlToFile(content, principal.getName(), "character");
+            }
+            case "map" -> {
+                String command = exportMapAsYAML();
+                writeYamlToFile(command, principal.getName(), "map");
+            }
+        }
+    }
+    
+    public void exportCharacter(Principal principal, MudCharacter ch) throws IOException {
+        export("character", principal, ch);
+    }
+    
+    public void exportItems(Principal principal) throws IOException {
+        export("items", principal, null);
+    }
+    
+    public void exportMap(Principal principal) throws IOException {
+        export("map", principal, null);
+    }
+
 
     public RepositoryBundle getRepositoryBundle() {
         return repositoryBundle;
@@ -384,4 +430,5 @@ public class ImportExportService {
     public RoleRepository getRoleRepository() {
         return roleRepository;
     }
+    
 }
