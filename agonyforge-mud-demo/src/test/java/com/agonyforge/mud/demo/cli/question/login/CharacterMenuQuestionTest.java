@@ -211,13 +211,18 @@ public class CharacterMenuQuestionTest {
             bannedUsersRepository,
             reloadedUsersRepository);
         Output result = uut.prompt(webSocketContext);
-        Optional<String> itemOptional = result.getOutput()
+        Optional<String> newCharacterOptional = result.getOutput()
                 .stream()
                 .filter(line -> line.contains("New Character"))
                 .findFirst();
+        Optional<String> importOptional = result.getOutput()
+            .stream()
+            .filter(line -> line.contains("Import Character"))
+            .findFirst();
 
-        assertEquals(7, result.getOutput().size());
-        assertTrue(itemOptional.isPresent());
+        assertEquals(8, result.getOutput().size());
+        assertTrue(newCharacterOptional.isPresent());
+        assertTrue(importOptional.isPresent());
 
         verify(characterRepository).findByPlayerUsername(eq(principalName));
     }
@@ -243,14 +248,20 @@ public class CharacterMenuQuestionTest {
             .stream()
             .filter(line -> line.contains("New Character"))
             .findAny();
+        Optional<String> importCharacterLineOptional = result.getOutput()
+            .stream()
+            .filter(line -> line.contains("Import Character"))
+            .findAny();
         Optional<String> characterNameLineOptional = result.getOutput()
             .stream()
             .filter(line -> line.contains(characterName) && line.contains("1"))
             .findAny();
 
-        assertEquals(8, result.getOutput().size());
+        assertEquals(9, result.getOutput().size());
         assertTrue(newCharacterLineOptional.isPresent());
+        assertTrue(importCharacterLineOptional.isPresent());
         assertTrue(characterNameLineOptional.isPresent());
+
 
         verify(characterRepository).findByPlayerUsername(eq(principalName));
     }
@@ -272,10 +283,10 @@ public class CharacterMenuQuestionTest {
 
         List<String> lines = result.getOutput()
             .stream()
-            .filter(line -> line.contains("New Character"))
+            .filter(line -> line.contains("New Character") || line.contains("Import Character"))
             .toList();
 
-        assertEquals(1, lines.size());
+        assertEquals(2, lines.size());
     }
 
     @Test

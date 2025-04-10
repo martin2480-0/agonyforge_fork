@@ -177,7 +177,7 @@ public class CharacterMenuQuestion extends BaseQuestion {
                 boolean playing = ch.getLocation() != null;
 
                 menuPane.getItems().add(new MenuItem(
-                    Integer.toString(menuPane.getItems().size()),
+                    Integer.toString(menuPane.getItems().size() - 1),
                     String.format("%s%s%s",
                         ch.getId() == 1L ? "[yellow]" : "[white]",
                         ch.getCharacter().getName(),

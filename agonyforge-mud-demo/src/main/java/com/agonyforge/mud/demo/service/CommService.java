@@ -135,8 +135,8 @@ public class CommService extends EchoService {
         simpMessagingTemplate.convertAndSendToUser(principal, "/queue/reload", "reload");
     }
 
-    public void triggerDownload(){
-
+    public void triggerDownload(String principal) {
+        simpMessagingTemplate.convertAndSendToUser(principal, "/queue/download", "download");
     }
 
     public void triggerUpload(String principal, String type){

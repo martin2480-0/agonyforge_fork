@@ -130,7 +130,7 @@ public class CharacterViewQuestionTest {
         Output result = uut.prompt(wsContext);
 
         int i = 0;
-        assertEquals(21, result.getOutput().size());
+        assertEquals(22, result.getOutput().size());
         assertTrue(result.getOutput().get(i++).contains("CHARACTER SHEET"));
         assertTrue(result.getOutput().get(i++).contains(characterName));
         assertTrue(result.getOutput().get(i++).contains(Pronoun.SHE.getObject()));
@@ -156,6 +156,7 @@ public class CharacterViewQuestionTest {
         assertEquals("", result.getOutput().get(i++));
         assertTrue(result.getOutput().get(i++).contains("Play"));
         assertTrue(result.getOutput().get(i++).contains("Delete"));
+        assertTrue(result.getOutput().get(i++).contains("Export"));
         assertTrue(result.getOutput().get(i++).contains("Go back"));
         assertTrue(result.getOutput().get(i).contains("selection"));
     }

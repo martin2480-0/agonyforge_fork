@@ -38,7 +38,7 @@ public class CharacterImportQuestion extends BaseQuestion {
     private void populateMenuItems() {
         menuPane.getItems().clear();
 
-        menuPane.getItems().add(new MenuItem("1", "Open File Chooser"));
+        menuPane.getItems().add(new MenuItem("1", "Import"));
         menuPane.getItems().add(new MenuItem("B", "Cancel"));
     }
 
@@ -67,6 +67,7 @@ public class CharacterImportQuestion extends BaseQuestion {
 
         if (itemOptional.isEmpty()) {
             output.append("[red]Please choose one of the menu options.");
+            nextQuestion = "characterImportQuestion";
         } else if ("1".equals(choice)) {
             commService.triggerUpload(wsContext.getPrincipal().getName(), "character");
             nextQuestion = "characterImportQuestion";

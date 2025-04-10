@@ -109,7 +109,7 @@ public class CharacterViewQuestion extends BaseQuestion {
 
         } else if ("E".equalsIgnoreCase(input.getInput())) {
             next = getQuestion("characterViewQuestion");
-            commService.triggerDownload();
+            commService.triggerDownload(wsContext.getPrincipal().getName());
         }
 
         else if ("B".equalsIgnoreCase(input.getInput())) {

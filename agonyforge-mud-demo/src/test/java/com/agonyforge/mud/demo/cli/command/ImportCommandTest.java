@@ -5,7 +5,6 @@ import com.agonyforge.mud.core.web.model.Input;
 import com.agonyforge.mud.core.web.model.Output;
 import com.agonyforge.mud.core.web.model.WebSocketContext;
 import com.agonyforge.mud.demo.cli.RepositoryBundle;
-import com.agonyforge.mud.demo.model.constant.Pronoun;
 import com.agonyforge.mud.demo.model.impl.*;
 import com.agonyforge.mud.demo.model.repository.MudCharacterRepository;
 import com.agonyforge.mud.demo.model.repository.ReloadedUsersRepository;
@@ -15,23 +14,25 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationContext;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
+import java.security.Principal;
+import java.util.*;
 
 import static com.agonyforge.mud.core.config.SessionConfiguration.MUD_CHARACTER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class KickCommandTest {
+public class ImportCommandTest {
+
     private static final Random RANDOM = new Random();
 
     @Mock
@@ -50,25 +51,25 @@ public class KickCommandTest {
     private Question question;
 
     @Mock
-    private MudCharacter ch, target;
+    private MudCharacter ch;
 
     @Mock
-    private CharacterComponent chCharacter, targetCharacter;
+    private CharacterComponent chCharacter;
 
     @Mock
-    private PlayerComponent chPlayer, targetPlayer;
+    private PlayerComponent chPlayer;
 
     @Mock
     private User targetUser;
 
     @Mock
+    private MudRoom destination;
+
+    @Mock
+    private LocationComponent chLocation;
+
+    @Mock
     private MudCharacterRepository mudCharacterRepository;
-
-    @Mock
-    private MudRoom room, destination;
-
-    @Mock
-    private LocationComponent chLocation, targetLocation;
 
     @Mock
     private UserRepository userRepository;
@@ -76,28 +77,32 @@ public class KickCommandTest {
     @Mock
     private ReloadedUsersRepository reloadedUsersRepository;
 
-    private static String targetPrincipal;
+    @Mock
+    private Principal principal;
+
+    private static String userPrincipal;
+
 
     @BeforeAll
     static void setupBeforeAll() {
-        targetPrincipal = String.valueOf(RANDOM.nextLong());
+        userPrincipal = String.valueOf(RANDOM.nextLong());
     }
 
     @BeforeEach
     void setUp() {
         Long chId = RANDOM.nextLong();
-        Long targetId = RANDOM.nextLong();
 
-        lenient().when(mudCharacterRepository.findAll()).thenReturn(List.of(ch, target));
-
+        lenient().when(mudCharacterRepository.findAll()).thenReturn(List.of(ch));
 
         lenient().when(wsContext.getAttributes()).thenReturn(Map.of(MUD_CHARACTER, chId));
 
+        lenient().when(wsContext.getPrincipal()).thenReturn(principal);
+
+        lenient().when(principal.getName()).thenReturn(userPrincipal);
+
         lenient().when(repositoryBundle.getCharacterRepository()).thenReturn(mudCharacterRepository);
 
-        lenient().when(userRepository.findUserByPrincipalName(targetPrincipal)).thenReturn(Optional.of(targetUser));
-
-        lenient().when(target.getCreatedBy()).thenReturn(targetPrincipal);
+        lenient().when(userRepository.findUserByPrincipalName(userPrincipal)).thenReturn(Optional.of(targetUser));
 
         lenient().when(repositoryBundle.getCharacterRepository()).thenReturn(mudCharacterRepository);
         lenient().when(mudCharacterRepository.findById(eq(chId))).thenReturn(Optional.of(ch));
@@ -106,67 +111,74 @@ public class KickCommandTest {
         lenient().when(ch.getCharacter()).thenReturn(chCharacter);
         lenient().when(chCharacter.getName()).thenReturn("Scion");
         lenient().when(ch.getPlayer()).thenReturn(chPlayer);
-
-        lenient().when(mudCharacterRepository.findById(eq(targetId))).thenReturn(Optional.of(target));
-        lenient().when(target.getLocation()).thenReturn(targetLocation);
-        lenient().when(targetLocation.getRoom()).thenReturn(room);
-        lenient().when(target.getCharacter()).thenReturn(targetCharacter);
-        lenient().when(targetCharacter.getName()).thenReturn("Target");
-        lenient().when(targetCharacter.getPronoun()).thenReturn(Pronoun.THEY);
-        lenient().when(target.getPlayer()).thenReturn(targetPlayer);
+        lenient().when(ch.getCreatedBy()).thenReturn(userPrincipal);
     }
 
 
     @Test
-    void testKickNoArgs() {
+    void testImportNoArgs() {
         Output output = new Output();
-        KickCommand uut = new KickCommand(repositoryBundle, commService, applicationContext, userRepository, reloadedUsersRepository);
+        ImportCommand uut = new ImportCommand(repositoryBundle, commService, applicationContext, reloadedUsersRepository, userRepository);
 
-        Question result = uut.execute(question, wsContext, List.of("KICK"), new Input("kick"), output);
+        Question result = uut.execute(question, wsContext, List.of("IMPORT"), new Input("import"), output);
 
         assertEquals(question, result);
-        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("Whom would you like to kick?")));
+        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("What would you like to import?")));
 
         verifyNoInteractions(commService);
         verifyNoInteractions(userRepository);
         verifyNoInteractions(reloadedUsersRepository);
     }
 
-
-    @Test
-    void testKickValidUser() {
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "import character",
+        "import items",
+        "import map"
+    })
+    void testImportValidType(String command) {
 
         Output output = new Output();
-        KickCommand uut = new KickCommand(repositoryBundle, commService, applicationContext, userRepository, reloadedUsersRepository);
+        ImportCommand uut = new ImportCommand(repositoryBundle, commService, applicationContext, reloadedUsersRepository, userRepository);
 
-        Question result = uut.execute(question, wsContext, List.of("KICK", "TARGET"), new Input("kick Target"), output);
+        List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
+
+        Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
 
         assertEquals(question, result);
-        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("Target has been kicked!")));
+
+        verify(commService).triggerUpload(eq(userPrincipal), eq(tokens.get(1).toLowerCase()));
 
         verify(reloadedUsersRepository).save(any());
 
-        verify(commService).reloadUser(targetPrincipal);
+        verify(commService).reloadUser(userPrincipal);
+
 
     }
 
-    @Test
-    void testKickInvalidUser() {
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "import characters",
+        "import item",
+        "import maps",
+        "import npcs"
+    })
+    void testImportInvalidType(String command) {
 
         Output output = new Output();
-        KickCommand uut = new KickCommand(repositoryBundle, commService, applicationContext, userRepository, reloadedUsersRepository);
+        ImportCommand uut = new ImportCommand(repositoryBundle, commService, applicationContext, reloadedUsersRepository, userRepository);
 
-        Question result = uut.execute(question, wsContext, List.of("KICK", "CARMEN"), new Input("kick Carmen"), output);
+        List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
+
+        Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
 
         assertEquals(question, result);
-        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains("Can't find that player.")));
+        assertTrue(output.getOutput().stream().anyMatch(line -> line.contains(String.format("Import of %s is not supported!", tokens.get(1).toLowerCase()))));
 
         verifyNoInteractions(userRepository);
         verifyNoInteractions(reloadedUsersRepository);
 
-        verify(commService, never()).reloadUser(targetPrincipal);
-
-        verify(commService, never()).sendToAll(eq(wsContext), any(Output.class), eq(ch));
+        verify(commService, never()).reloadUser(userPrincipal);
 
     }
 }

@@ -280,6 +280,48 @@ public class CommServiceTest {
     }
 
     @Test
+    void testTriggerUpload() {
+        CommService uut = new CommService(
+            applicationContext,
+            simpMessagingTemplate,
+            simpUserRegistry,
+            sessionAttributeService,
+            characterRepository);
+
+        String type = "characters";
+
+        uut.triggerUpload(targetPrincipal, type);
+
+        verify(simpMessagingTemplate).convertAndSendToUser(
+            eq(targetPrincipal),
+            eq("/queue/upload"),
+            eq(type)
+        );
+
+        verifyNoMoreInteractions(simpMessagingTemplate);
+    }
+
+    @Test
+    void testTriggerDownload() {
+        CommService uut = new CommService(
+            applicationContext,
+            simpMessagingTemplate,
+            simpUserRegistry,
+            sessionAttributeService,
+            characterRepository);
+
+        uut.triggerDownload(targetPrincipal);
+
+        verify(simpMessagingTemplate).convertAndSendToUser(
+            eq(targetPrincipal),
+            eq("/queue/download"),
+            eq("download")
+        );
+
+        verifyNoMoreInteractions(simpMessagingTemplate);
+    }
+
+    @Test
     void testSendToRoom() {
         CommService uut = new CommService(
             applicationContext,

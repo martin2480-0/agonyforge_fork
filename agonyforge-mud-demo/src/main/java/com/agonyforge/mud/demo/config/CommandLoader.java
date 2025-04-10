@@ -89,7 +89,9 @@ public class CommandLoader {
             refs.put("FORCE", new CommandReference(30, "FORCE", "forceCommand", "Force a character to do something.", false, false));
             refs.put("FREEZE", new CommandReference(30, "FREEZE", "freezeCommand", "Freezes character.", false, false));
             refs.put("BAN", new CommandReference(30, "BAN", "banCommand", "Bans player of the character.", false, false));
-            refs.put("KICK", new CommandReference(30, "KICK", "kickCommand", "Kicks character from the game.", false, false));
+            refs.put("KICK", new CommandReference(30, "KICK", "kickCommand", "Kicks character from the session.", false, false));
+            refs.put("IMPORT", new CommandReference(30, "IMPORT", "importCommand", "Imports stuff to the game.", false, false));
+            refs.put("EXPORT", new CommandReference(30, "EXPORT", "exportCommand", "Exports stuff from the game.", false, false));
 
 
             LOGGER.info("Creating command references");

@@ -35,37 +35,39 @@ public class ImportListener {
     }
 
 
-    @Scheduled(cron = "0/1 * * * * ?")
+    @Scheduled(cron = "0/5 * * * * ?")
     public void checkTempFiles() throws IOException {
         if (lock.tryLock()) {
             try {
                 Optional<File[]> optionalFiles = getFilesInTempDir();
-                if (optionalFiles.isPresent()) {
-                    File[] files = optionalFiles.get();
-                    for (File file : files) {
-                        String content = Files.readString(Paths.get(file.getPath()));
-                        String filename = file.getName();
-                        String[] parts = filename.split("_");
-                        String principal = parts[1];
-                        String type = parts[2];
-                        switch (type) {
-                            case "items" -> importExportService.importItems(content);
-                            case "character" -> importExportService.importCharacter(principal, content);
-                            case "map" -> importExportService.importMap(content);
-                            default -> {
-                                if (file.delete()) {
-                                    LOGGER.info("Deleted file that was not valid: {}", file.getName());
-                                } else {
-                                    LOGGER.info("Failed to delete file that was not valid: {}", file.getName());
-                                }
+                if (optionalFiles.isEmpty()) {
+                    return;
+                }
+
+                File[] files = optionalFiles.get();
+                for (File file : files) {
+                    String content = Files.readString(Paths.get(file.getPath()));
+                    String filename = file.getName();
+                    String[] parts = filename.split("_");
+                    String principal = parts[1];
+                    String type = parts[2];
+                    switch (type) {
+                        case "items" -> importExportService.importItems(content);
+                        case "character" -> importExportService.importCharacter(principal, content);
+                        case "map" -> importExportService.importMap(content);
+                        default -> {
+                            if (file.delete()) {
+                                LOGGER.info("Deleted file that was not valid: {}", file.getName());
+                            } else {
+                                LOGGER.info("Failed to delete file that was not valid: {}", file.getName());
                             }
                         }
-                        commService.reloadUser(principal);
-                        if (file.delete()) {
-                            LOGGER.info("Deleted: {}", file.getName());
-                        } else {
-                            LOGGER.info("Failed to delete: {}", file.getName());
-                        }
+                    }
+                    commService.reloadUser(principal);
+                    if (file.delete()) {
+                        LOGGER.info("Deleted: {}", file.getName());
+                    } else {
+                        LOGGER.info("Failed to delete: {}", file.getName());
                     }
                 }
             } finally {

@@ -37,7 +37,7 @@ public class ImportExportService {
         this.roleRepository = roleRepository;
     }
 
-    public String exportCharacterAsYAML(MudCharacter ch) throws JsonProcessingException {
+    private String exportCharacterAsYAML(MudCharacter ch) throws JsonProcessingException {
         Long id = ch.getCharacter().getId();
         String characterName = ch.getCharacter().getName();
         int hitPoints = ch.getCharacter().getHitPoints();
@@ -83,7 +83,7 @@ public class ImportExportService {
     }
 
 
-    public List<ItemDTO> exportChItems(MudCharacter ch) {
+    private List<ItemDTO> exportChItems(MudCharacter ch) {
         List<MudItem> items = getRepositoryBundle().getItemRepository().findByLocationHeld(ch);
 
         List<MudItem> held = items
@@ -135,7 +135,7 @@ public class ImportExportService {
         return false;
     }
 
-    public MudItemTemplate importItem(ItemDTO itemDTO){
+    private MudItemTemplate importItem(ItemDTO itemDTO){
         MudItemTemplate item = new MudItemTemplate();
 
         item.setItem(new ItemComponent());
@@ -204,7 +204,7 @@ public class ImportExportService {
         return false;
     }
 
-    public MudRoom importRoom(MapExportDTO.RoomDTO roomDTO) {
+    private MudRoom importRoom(MapExportDTO.RoomDTO roomDTO) {
         MudRoom room = new MudRoom();
 
         room.setId(roomDTO.getRoomId());
@@ -219,7 +219,7 @@ public class ImportExportService {
 
     }
 
-    public String exportMapAsYAML() throws JsonProcessingException {
+    private String exportMapAsYAML() throws JsonProcessingException {
         List<MudRoom> rooms = repositoryBundle.getRoomRepository().findAll();
 
         List<MapExportDTO.RoomDTO> roomDTOs = new ArrayList<>();
@@ -378,7 +378,7 @@ public class ImportExportService {
 
     }
 
-    public void writeYamlToFile(String yamlFileContent, String principal, String type) throws IOException {
+    private void writeYamlToFile(String yamlFileContent, String principal, String type) throws IOException {
         String fileName = String.format("upload_%s_%s_%s.json", principal, type, UUID.randomUUID());
 
         Path filePath = agonyForgePath.resolve(fileName);
@@ -405,19 +405,6 @@ public class ImportExportService {
             }
         }
     }
-    
-    public void exportCharacter(Principal principal, MudCharacter ch) throws IOException {
-        export("character", principal, ch);
-    }
-    
-    public void exportItems(Principal principal) throws IOException {
-        export("items", principal, null);
-    }
-    
-    public void exportMap(Principal principal) throws IOException {
-        export("map", principal, null);
-    }
-
 
     public RepositoryBundle getRepositoryBundle() {
         return repositoryBundle;
