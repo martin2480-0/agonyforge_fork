@@ -9,6 +9,7 @@ import com.agonyforge.mud.core.web.model.WebSocketContext;
 import com.agonyforge.mud.demo.cli.RepositoryBundle;
 import com.agonyforge.mud.demo.cli.command.LookCommand;
 import com.agonyforge.mud.demo.cli.question.BaseQuestion;
+import com.agonyforge.mud.demo.model.export.ImportExportService;
 import com.agonyforge.mud.demo.model.impl.LocationComponent;
 import com.agonyforge.mud.demo.model.impl.MudCharacter;
 import com.agonyforge.mud.demo.model.impl.MudRoom;
@@ -19,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.util.Optional;
 
 import static com.agonyforge.mud.core.config.SessionConfiguration.MUD_CHARACTER;
@@ -32,17 +34,20 @@ public class CharacterViewQuestion extends BaseQuestion {
     private final CommService commService;
     private final SessionAttributeService sessionAttributeService;
     private final CharacterSheetFormatter characterSheetFormatter;
+    private final ImportExportService importExportService;
 
     @Autowired
     public CharacterViewQuestion(ApplicationContext applicationContext,
                                  RepositoryBundle repositoryBundle,
                                  CommService commService,
                                  SessionAttributeService sessionAttributeService,
-                                 CharacterSheetFormatter characterSheetFormatter) {
+                                 CharacterSheetFormatter characterSheetFormatter,
+                                 ImportExportService importExportService) {
         super(applicationContext, repositoryBundle);
         this.commService = commService;
         this.sessionAttributeService = sessionAttributeService;
         this.characterSheetFormatter = characterSheetFormatter;
+        this.importExportService = importExportService;
     }
 
     @Override
@@ -109,6 +114,16 @@ public class CharacterViewQuestion extends BaseQuestion {
 
         } else if ("E".equalsIgnoreCase(input.getInput())) {
             next = getQuestion("characterViewQuestion");
+            try {
+                if (chOptional.isEmpty()){
+                    throw new IOException(); // TODO add better exception
+                }
+                importExportService.export("character", wsContext.getPrincipal(), chOptional.get());
+            }catch (IOException e) {
+                next = getQuestion("characterViewQuestion");
+                output.append("[red]Could not export the character");
+                return new Response(next, output);
+            }
             commService.triggerDownload(wsContext.getPrincipal().getName());
         }
 

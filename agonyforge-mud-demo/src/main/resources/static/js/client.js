@@ -126,17 +126,38 @@ function connect() {
                 if (!file) return;
 
                 const reader = new FileReader();
+
                 reader.onload = function(evt) {
                     const base64 = evt.target.result.split(",")[1];
 
                     const uploadMessage = {
-                        filename: file.name,
-                        contentType: file.type || "application/octet-stream",
                         base64Content: base64,
                         type: uploadedFileMudType
                     };
 
-                    stompClient.send("/queue/import", {}, JSON.stringify(uploadMessage));
+                    const token = $("meta[name='_csrf']").attr("content");
+                    const header = $("meta[name='_csrf_header']").attr("content");
+
+                    fetch("/import", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/yaml",
+                            [header]: token
+                        },
+                        body: JSON.stringify(uploadMessage)
+                    })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error("Upload failed");
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log("Upload successful:", data);
+                        })
+                        .catch(error => {
+                            console.error("Upload error:", error);
+                        });
                 };
             });
 

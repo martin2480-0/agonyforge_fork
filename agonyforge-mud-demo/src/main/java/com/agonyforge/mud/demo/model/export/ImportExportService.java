@@ -379,7 +379,7 @@ public class ImportExportService {
     }
 
     private void writeYamlToFile(String yamlFileContent, String principal, String type) throws IOException {
-        String fileName = String.format("upload_%s_%s_%s.json", principal, type, UUID.randomUUID());
+        String fileName = String.format("download_%s_%s_%s.json", principal, type, UUID.randomUUID());
 
         Path filePath = agonyForgePath.resolve(fileName);
 

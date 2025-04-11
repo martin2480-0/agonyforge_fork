@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -35,16 +36,15 @@ public class DownloadController {
     }
 
     @GetMapping("/download")
-    public ResponseEntity<StreamingResponseBody> downloadFile(@RequestHeader Map<String, Object> headers) throws IOException {
-        WebSocketContext wsContext;
+    public ResponseEntity<StreamingResponseBody> downloadFile(@RequestHeader Map<String, Object> headers,
+                                                              Principal principal) throws IOException {
 
-        try {
+        /*try { 197368353
             wsContext = WebSocketContext.build(headers);
         } catch (IllegalStateException e) {
-            return ResponseEntity.internalServerError().build();
-        }
+                return ResponseEntity.internalServerError().build();
+        } TODO  fix loading principal from headers */
 
-        Principal principal = wsContext.getPrincipal();
         Optional<File[]> files = getFilesInTempDir();
 
         if (files.isEmpty()) {
@@ -85,8 +85,8 @@ public class DownloadController {
         };
 
         return ResponseEntity.ok()
-            .contentType(MediaType.APPLICATION_JSON)
-            .header(HttpHeaders.CONTENT_DISPOSITION, String.format("attachment; filename=\"%s.json\"", type[0]))
+            .contentType(MediaType.APPLICATION_YAML)
+            .header(HttpHeaders.CONTENT_DISPOSITION, String.format("attachment; filename=\"%s.yaml\"", type[0]))
             .body(stream);
     }
 

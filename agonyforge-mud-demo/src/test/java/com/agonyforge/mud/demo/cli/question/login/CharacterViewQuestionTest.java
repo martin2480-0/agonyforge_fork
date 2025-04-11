@@ -7,6 +7,7 @@ import com.agonyforge.mud.core.web.model.Input;
 import com.agonyforge.mud.core.web.model.Output;
 import com.agonyforge.mud.core.web.model.WebSocketContext;
 import com.agonyforge.mud.demo.cli.RepositoryBundle;
+import com.agonyforge.mud.demo.model.export.ImportExportService;
 import com.agonyforge.mud.demo.model.impl.*;
 import com.agonyforge.mud.demo.model.constant.Pronoun;
 import com.agonyforge.mud.demo.model.repository.*;
@@ -21,6 +22,8 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationContext;
 
+import java.io.IOException;
+import java.security.Principal;
 import java.util.*;
 
 import static com.agonyforge.mud.core.config.SessionConfiguration.MUD_CHARACTER;
@@ -89,6 +92,12 @@ public class CharacterViewQuestionTest {
     @Mock
     private WebSocketContext wsContext;
 
+    @Mock
+    private ImportExportService importExportService;
+
+    @Mock
+    private Principal principal;
+
     @Captor
     private ArgumentCaptor<MudCharacter> characterCaptor;
 
@@ -126,7 +135,7 @@ public class CharacterViewQuestionTest {
         when(characterComponent.getSpecies()).thenReturn(species);
         when(characterComponent.getProfession()).thenReturn(profession);
 
-        CharacterViewQuestion uut = new CharacterViewQuestion(applicationContext, repositoryBundle, commService, sessionAttributeService, characterSheetFormatter);
+        CharacterViewQuestion uut = new CharacterViewQuestion(applicationContext, repositoryBundle, commService, sessionAttributeService, characterSheetFormatter, importExportService);
         Output result = uut.prompt(wsContext);
 
         int i = 0;
@@ -163,7 +172,7 @@ public class CharacterViewQuestionTest {
 
     @Test
     void testPromptNoCharacter() {
-        CharacterViewQuestion uut = new CharacterViewQuestion(applicationContext, repositoryBundle, commService, sessionAttributeService, characterSheetFormatter);
+        CharacterViewQuestion uut = new CharacterViewQuestion(applicationContext, repositoryBundle, commService, sessionAttributeService, characterSheetFormatter, importExportService);
         Output result = uut.prompt(wsContext);
 
         assertTrue(result.getOutput().get(0).contains("[red]"));
@@ -192,7 +201,7 @@ public class CharacterViewQuestionTest {
         when(roomRepository.findById(eq(START_ROOM))).thenReturn(Optional.of(room));
         when(applicationContext.getBean(eq("commandQuestion"), eq(Question.class))).thenReturn(question);
 
-        CharacterViewQuestion uut = new CharacterViewQuestion(applicationContext, repositoryBundle, commService, sessionAttributeService, characterSheetFormatter);
+        CharacterViewQuestion uut = new CharacterViewQuestion(applicationContext, repositoryBundle, commService, sessionAttributeService, characterSheetFormatter, importExportService);
         Response result = uut.answer(wsContext, new Input("p"));
 
         verify(characterRepository).save(characterCaptor.capture());
@@ -230,7 +239,7 @@ public class CharacterViewQuestionTest {
         when(roomRepository.findById(eq(START_ROOM))).thenReturn(Optional.of(room));
         when(applicationContext.getBean(eq("commandQuestion"), eq(Question.class))).thenReturn(question);
 
-        CharacterViewQuestion uut = new CharacterViewQuestion(applicationContext, repositoryBundle, commService, sessionAttributeService, characterSheetFormatter);
+        CharacterViewQuestion uut = new CharacterViewQuestion(applicationContext, repositoryBundle, commService, sessionAttributeService, characterSheetFormatter, importExportService);
         Response result = uut.answer(wsContext, new Input("p"));
 
         verify(characterRepository).save(characterCaptor.capture());
@@ -252,7 +261,7 @@ public class CharacterViewQuestionTest {
     void testAnswerDelete() {
         when(applicationContext.getBean(eq("characterDeleteQuestion"), eq(Question.class))).thenReturn(question);
 
-        CharacterViewQuestion uut = new CharacterViewQuestion(applicationContext, repositoryBundle, commService, sessionAttributeService, characterSheetFormatter);
+        CharacterViewQuestion uut = new CharacterViewQuestion(applicationContext, repositoryBundle, commService, sessionAttributeService, characterSheetFormatter, importExportService);
         Response result = uut.answer(wsContext, new Input("d"));
 
         assertEquals(question, result.getNext());
@@ -264,12 +273,50 @@ public class CharacterViewQuestionTest {
     void testAnswerBack() {
         when(applicationContext.getBean(eq("characterMenuQuestion"), eq(Question.class))).thenReturn(question);
 
-        CharacterViewQuestion uut = new CharacterViewQuestion(applicationContext, repositoryBundle, commService, sessionAttributeService, characterSheetFormatter);
+        CharacterViewQuestion uut = new CharacterViewQuestion(applicationContext, repositoryBundle, commService, sessionAttributeService, characterSheetFormatter, importExportService);
         Response result = uut.answer(wsContext, new Input("b"));
 
         assertEquals(question, result.getNext());
 
         verify(characterRepository, never()).delete(any());
+    }
+
+    @Test
+    void testAnswerExport() throws IOException {
+        Long chId = random.nextLong();
+        String principalName = String.valueOf(random.nextLong());
+        String wsSessionId = UUID.randomUUID().toString();
+        Map<String, Object> attributes = new HashMap<>();
+
+        attributes.put(MUD_CHARACTER, chId);
+
+        when(wsContext.getAttributes()).thenReturn(attributes);
+        lenient().when(wsContext.getSessionId()).thenReturn(wsSessionId);
+
+        when(wsContext.getPrincipal()).thenReturn(principal);
+        when(principal.getName()).thenReturn(principalName);
+
+        lenient().when(ch.getPlayer()).thenReturn(playerComponent);
+        lenient().when(ch.getCharacter()).thenReturn(characterComponent);
+        lenient().when(ch.getLocation())
+            .thenReturn(null)
+            .thenReturn(locationComponent);
+        lenient().when(ch.getCharacter().getName()).thenReturn("Scion");
+        lenient().when(characterRepository.findById(eq(chId))).thenReturn(Optional.of(ch));
+        lenient().when(characterRepository.save(any(MudCharacter.class))).thenAnswer(i -> i.getArguments()[0]);
+        lenient().when(roomRepository.findById(eq(START_ROOM))).thenReturn(Optional.of(room));
+
+        when(applicationContext.getBean(eq("characterViewQuestion"), eq(Question.class))).thenReturn(question);
+
+        CharacterViewQuestion uut = new CharacterViewQuestion(applicationContext, repositoryBundle, commService, sessionAttributeService, characterSheetFormatter, importExportService);
+        Response result = uut.answer(wsContext, new Input("e"));
+
+        assertEquals(question, result.getNext());
+
+        verify(importExportService).export(any(), any(), any());
+        verify(characterRepository, never()).delete(any());
+
+
     }
 
     @Test
@@ -282,7 +329,7 @@ public class CharacterViewQuestionTest {
         when(wsContext.getAttributes()).thenReturn(attributes);
         when(characterRepository.findById(eq(chId))).thenReturn(Optional.of(ch));
 
-        CharacterViewQuestion uut = new CharacterViewQuestion(applicationContext, repositoryBundle, commService, sessionAttributeService, characterSheetFormatter);
+        CharacterViewQuestion uut = new CharacterViewQuestion(applicationContext, repositoryBundle, commService, sessionAttributeService, characterSheetFormatter, importExportService);
         Response result = uut.answer(wsContext, new Input("x"));
         Output output = result.getFeedback().orElseThrow();
 
