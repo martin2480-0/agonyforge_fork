@@ -17,7 +17,7 @@
         </form>
     </section>
 
-    <input type="file" id="fileInput" style="display: none;" onchange="uploadFile()">
+    <input type="file" id="fileInput" style="display: none;">
 </@secure>
 <@anonymous "OAUTH2_USER">
     <main class="container-fluid">

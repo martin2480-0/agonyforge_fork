@@ -110,15 +110,39 @@ function connect() {
 
             // triggers a file download (character, item or map)
             stompClient.subscribe('/user/queue/download', function (message) {
-                if (message.body === "download") {
-                    const link = document.createElement("a");
-                    link.href = "/download";
-                    link.download = "";
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }
+                const token = $("meta[name='_csrf']").attr("content");
+                const header = $("meta[name='_csrf_header']").attr("content");
+
+                fetch("/download", {
+                    method: "POST",
+                    headers: {
+                        [header]: token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                })
+                    .then(response => {
+                        const contentDisposition = response.headers.get('Content-Disposition');
+                        let filename = 'downloaded_file';
+
+                        if (contentDisposition && contentDisposition.includes('filename=')) {
+                            const matches = contentDisposition.match(/filename="(.+)"/);
+                            if (matches && matches[1]) {
+                                filename = matches[1];
+                            }
+                        }
+
+                        return response.blob().then(blob => ({ blob, filename }));
+                    })
+                    .then(({ blob, filename }) => {
+                        const link = document.createElement("a");
+                        link.href = URL.createObjectURL(blob);
+                        link.download = filename; // Use the extracted filename
+                        link.click();
+                    })
+                    .catch(error => console.error("Error downloading file:", error));
             });
+
 
             // triggers when file is uploaded
             $("#fileInput").on("change", function(event) {
@@ -141,7 +165,7 @@ function connect() {
                     fetch("/import", {
                         method: "POST",
                         headers: {
-                            "Content-Type": "application/yaml",
+                            "Content-Type": "application/json",
                             [header]: token
                         },
                         body: JSON.stringify(uploadMessage)

@@ -7,10 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.File;
@@ -35,15 +32,8 @@ public class DownloadController {
     public DownloadController() {
     }
 
-    @GetMapping("/download")
-    public ResponseEntity<StreamingResponseBody> downloadFile(@RequestHeader Map<String, Object> headers,
-                                                              Principal principal) throws IOException {
-
-        /*try { 197368353
-            wsContext = WebSocketContext.build(headers);
-        } catch (IllegalStateException e) {
-                return ResponseEntity.internalServerError().build();
-        } TODO  fix loading principal from headers */
+    @PostMapping("/download")
+    public ResponseEntity<StreamingResponseBody> downloadFile(Principal principal) throws IOException {
 
         Optional<File[]> files = getFilesInTempDir();
 
@@ -70,7 +60,7 @@ public class DownloadController {
         }
 
         File file = matchingFile.get();
-        LOGGER.info("User with principal {} downloading file {}", principal.getName(), file.getName());
+        LOGGER.info("User with principal {} downloading file {}", principal, file.getName());
 
         InputStream inputStream = new FileInputStream(file);
 

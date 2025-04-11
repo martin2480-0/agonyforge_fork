@@ -100,13 +100,13 @@ public class WebSocketController {
     @MessageMapping("/upload")
     @SendToUser(value = "/queue/upload")
     public String sendUploadSignal(String type) { // TODO fix naming
-        return "download";
+        return "upload;" + type;
     }
 
     @MessageMapping("/download")
     @SendToUser(value = "/queue/download")
     public String sendDownloadSignal(String type) {
-        return "upload;" + type;
+        return "download;" + type;
     }
 
     @MessageMapping("/input")

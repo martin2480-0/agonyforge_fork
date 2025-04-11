@@ -295,8 +295,8 @@ public class CommServiceTest {
         verify(simpMessagingTemplate).convertAndSendToUser(
             eq(targetPrincipal),
             eq("/queue/upload"),
-            eq(type)
-        );
+            eq(String.format(type)
+        ));
 
         verifyNoMoreInteractions(simpMessagingTemplate);
     }
@@ -315,7 +315,7 @@ public class CommServiceTest {
         verify(simpMessagingTemplate).convertAndSendToUser(
             eq(targetPrincipal),
             eq("/queue/download"),
-            eq("download")
+            eq(targetPrincipal)
         );
 
         verifyNoMoreInteractions(simpMessagingTemplate);

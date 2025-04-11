@@ -10,6 +10,7 @@ import java.security.Principal;
 
 @Controller
 public class WebController {
+
     @RequestMapping("/")
     public ModelAndView index(Principal principal) {
         ModelAndView model = new ModelAndView("index");
