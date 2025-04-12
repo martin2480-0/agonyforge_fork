@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.Optional;
 
 import static com.agonyforge.mud.core.config.SessionConfiguration.MUD_CHARACTER;
+import static com.agonyforge.mud.demo.model.export.ImportExportService.writeYamlToFile;
 
 @Component
 public class CharacterViewQuestion extends BaseQuestion {
@@ -118,7 +119,8 @@ public class CharacterViewQuestion extends BaseQuestion {
                 if (chOptional.isEmpty()){
                     throw new IOException(); // TODO add better exception
                 }
-                importExportService.export("character", wsContext.getPrincipal(), chOptional.get());
+                String content = importExportService.export("character", chOptional.get());
+                writeYamlToFile(content, wsContext.getPrincipal().getName(), "character");
             }catch (IOException e) {
                 next = getQuestion("characterViewQuestion");
                 output.append("[red]Could not export the character");

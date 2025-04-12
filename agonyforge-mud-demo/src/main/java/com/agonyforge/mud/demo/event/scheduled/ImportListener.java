@@ -51,19 +51,17 @@ public class ImportListener {
                     String[] parts = filename.split("_");
                     String principal = parts[1];
                     String type = parts[2];
-                    switch (type) {
+                    boolean success = switch (type) {
                         case "items" -> importExportService.importItems(content);
-                        case "character" -> importExportService.importCharacter(principal, content);
+                        case "character" -> importExportService.importPlayerCharacter(principal, content);
                         case "map" -> importExportService.importMap(content);
-                        default -> {
-                            if (file.delete()) {
-                                LOGGER.info("Deleted file that was not valid: {}", file.getName());
-                            } else {
-                                LOGGER.info("Failed to delete file that was not valid: {}", file.getName());
-                            }
-                        }
+                        default -> false;
+                    };
+                    if (!success) {
+                        LOGGER.info("Failed to import file: {}", file.getName());
+                    }else {
+                        commService.reloadUser(principal);
                     }
-                    commService.reloadUser(principal);
                     if (file.delete()) {
                         LOGGER.info("Deleted: {}", file.getName());
                     } else {

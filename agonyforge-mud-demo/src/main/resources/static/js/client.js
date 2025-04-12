@@ -66,6 +66,53 @@ $(document).on("keyup", function(event) {
     }
 });
 
+// triggers when file is uploaded
+$(document).ready(function() {
+    $("#fileInput").on("change", function(event) {
+        console.log("fileInput");
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+
+        reader.onload = function(evt) {
+            console.log("reading");
+            const base64 = evt.target.result.split(",")[1];
+
+            const uploadMessage = {
+                base64Content: base64,
+                type: uploadedFileMudType
+            };
+
+            const token = $("meta[name='_csrf']").attr("content");
+            const header = $("meta[name='_csrf_header']").attr("content");
+
+            fetch("/import", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    [header]: token
+                },
+                body: JSON.stringify(uploadMessage)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Upload failed");
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Upload successful:", data);
+                })
+                .catch(error => {
+                    console.error("Upload error:", error);
+                });
+
+        };
+        reader.readAsDataURL(file);
+    });
+});
+
 
 
 function connect() {
@@ -142,50 +189,6 @@ function connect() {
                     })
                     .catch(error => console.error("Error downloading file:", error));
             });
-
-
-            // triggers when file is uploaded
-            $("#fileInput").on("change", function(event) {
-                const file = event.target.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-
-                reader.onload = function(evt) {
-                    const base64 = evt.target.result.split(",")[1];
-
-                    const uploadMessage = {
-                        base64Content: base64,
-                        type: uploadedFileMudType
-                    };
-
-                    const token = $("meta[name='_csrf']").attr("content");
-                    const header = $("meta[name='_csrf_header']").attr("content");
-
-                    fetch("/import", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            [header]: token
-                        },
-                        body: JSON.stringify(uploadMessage)
-                    })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error("Upload failed");
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
-                            console.log("Upload successful:", data);
-                        })
-                        .catch(error => {
-                            console.error("Upload error:", error);
-                        });
-                };
-            });
-
-
         },
         function(event) { // errorCallback
             console.log(`Connection error: ${event.code} => ${event.reason}`);

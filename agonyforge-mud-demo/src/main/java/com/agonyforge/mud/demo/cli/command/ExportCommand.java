@@ -15,6 +15,8 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.util.List;
 
+import static com.agonyforge.mud.demo.model.export.ImportExportService.writeYamlToFile;
+
 @Component
 public class ExportCommand extends AbstractCommand {
 
@@ -39,7 +41,8 @@ public class ExportCommand extends AbstractCommand {
 
         try {
             if (type.equals("items") || type.equals("map") || type.equals("character")) {
-                importExportService.export(type, webSocketContext.getPrincipal(), ch);
+                String content = importExportService.export(type, ch);
+                writeYamlToFile(content, webSocketContext.getPrincipal().getName(), type);
             } else {
                 output.append("[default]Export of %s is not supported!", type);
                 return question;

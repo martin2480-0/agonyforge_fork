@@ -141,7 +141,7 @@ public class ExportCommandTest {
 
         assertEquals(question, result);
 
-        verify(importExportService).export(eq(tokens.get(1).toLowerCase()), eq(principal), any());
+        verify(importExportService).export(eq(tokens.get(1).toLowerCase()),any());
 
         verify(commService).triggerDownload(userPrincipal);
 
@@ -155,7 +155,7 @@ public class ExportCommandTest {
         Output output = new Output();
         ExportCommand uut = new ExportCommand(repositoryBundle, commService, applicationContext, importExportService);
 
-        doThrow(new IOException()).when(importExportService).export("items", principal, ch);
+        doThrow(new IOException()).when(importExportService).export("items", ch);
 
         Question result = uut.execute(question, wsContext, List.of("EXPORT", "ITEMS"), new Input("export items"), output);
 

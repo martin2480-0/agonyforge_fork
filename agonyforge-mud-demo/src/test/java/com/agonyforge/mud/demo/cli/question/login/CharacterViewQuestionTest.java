@@ -313,7 +313,7 @@ public class CharacterViewQuestionTest {
 
         assertEquals(question, result.getNext());
 
-        verify(importExportService).export(any(), any(), any());
+        verify(importExportService).export(any(), any());
         verify(characterRepository, never()).delete(any());
 
 

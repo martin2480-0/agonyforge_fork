@@ -66,8 +66,6 @@ public class ImportCommand extends AbstractCommand {
 
         reloadedUsersRepository.save(reloadedUser);
 
-        getCommService().reloadUser(principal);
-
         return question;
     }
 
