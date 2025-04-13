@@ -151,7 +151,7 @@ public class ImportCommandTest {
 
         verify(reloadedUsersRepository).save(any());
 
-        verify(commService).reloadUser(userPrincipal);
+        verify(commService).triggerUpload(userPrincipal, tokens.get(1).toLowerCase());
 
 
     }

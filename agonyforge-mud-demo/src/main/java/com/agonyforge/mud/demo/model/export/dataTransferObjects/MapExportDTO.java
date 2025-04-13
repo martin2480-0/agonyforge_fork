@@ -2,14 +2,23 @@ package com.agonyforge.mud.demo.model.export.dataTransferObjects;
 
 import com.agonyforge.mud.demo.model.constant.Direction;
 import com.agonyforge.mud.demo.model.constant.RoomFlag;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 import java.util.Set;
 
 public class MapExportDTO {
+    @JsonProperty("rooms")
     public List<RoomDTO> rooms;
+
+    @JsonProperty("characters")
     public List<CharacterDTO> characters;
+
+    @JsonProperty("items")
     public List<ItemDTO> items;
+
+
+    public MapExportDTO() {}
 
     public MapExportDTO(List<RoomDTO> rooms, List<CharacterDTO> characters, List<ItemDTO> items) {
         this.rooms = rooms;
@@ -50,6 +59,8 @@ public class MapExportDTO {
         private List<Long> itemIds;
         private List<Long> characterIds; // means NPCs
         private Set<RoomFlag> flags;
+
+        public RoomDTO() {}
 
         public RoomDTO(Long id, Long zoneId,String name, String description, List<ExitDTO> exits,
                        List<Long> itemIds, List<Long> characterIds, Set<RoomFlag> flags) {
@@ -131,6 +142,8 @@ public class MapExportDTO {
     public static class ExitDTO {
         public Direction direction;
         public Long destinationRoomId;
+
+        public ExitDTO() {}
 
         public ExitDTO(Direction direction, Long destinationRoomId) {
             this.direction = direction;

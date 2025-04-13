@@ -307,6 +307,7 @@ public class CharacterViewQuestionTest {
         lenient().when(roomRepository.findById(eq(START_ROOM))).thenReturn(Optional.of(room));
 
         when(applicationContext.getBean(eq("characterViewQuestion"), eq(Question.class))).thenReturn(question);
+        when(importExportService.export(any(), any())).thenReturn("---");
 
         CharacterViewQuestion uut = new CharacterViewQuestion(applicationContext, repositoryBundle, commService, sessionAttributeService, characterSheetFormatter, importExportService);
         Response result = uut.answer(wsContext, new Input("e"));

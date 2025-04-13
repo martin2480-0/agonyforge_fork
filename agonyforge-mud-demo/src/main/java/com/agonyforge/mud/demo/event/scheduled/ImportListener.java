@@ -29,11 +29,15 @@ public class ImportListener {
     CommService commService;
 
     @Autowired
-    private ImportListener(ImportExportService importExportService, CommService commService) {
+    public ImportListener(ImportExportService importExportService, CommService commService) {
         this.importExportService = importExportService;
         this.commService = commService;
     }
 
+
+    private String getContent(File file) throws IOException {
+        return Files.readString(Paths.get(file.getPath()));
+    }
 
     @Scheduled(cron = "0/5 * * * * ?")
     public void checkTempFiles() throws IOException {
@@ -46,7 +50,7 @@ public class ImportListener {
 
                 File[] files = optionalFiles.get();
                 for (File file : files) {
-                    String content = Files.readString(Paths.get(file.getPath()));
+                    String content = getContent(file);
                     String filename = file.getName();
                     String[] parts = filename.split("_");
                     String principal = parts[1];

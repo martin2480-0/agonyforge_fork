@@ -27,6 +27,10 @@ public class UploadController {
     public UploadController() {
     }
 
+    protected void writeToFile(Path path, byte[] data) throws IOException {
+        Files.write(path, data);
+    }
+
     @PostMapping("/import")
     public ResponseEntity<Output> handleFileUpload(@RequestBody FileTransferDTO message, Principal principal) {
         try {
@@ -37,7 +41,8 @@ public class UploadController {
 
             Path filePath = agonyForgePath.resolve(fileName);
             Files.createDirectories(agonyForgePath);
-            Files.write(filePath, data);
+
+            writeToFile(filePath, data);
 
             LOGGER.info("Uploaded file for principal {} to {}", principal.getName(), filePath);
 

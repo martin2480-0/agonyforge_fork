@@ -4,12 +4,12 @@ package com.agonyforge.mud.core.web;
 public class FileTransferDTO {
     private String base64Content;
     private String type;
-    private String principal;
 
-    public FileTransferDTO(String base64Content, String type, String principal) {
+    public FileTransferDTO() {}
+
+    public FileTransferDTO(String base64Content, String type) {
         this.base64Content = base64Content;
         this.type = type;
-        this.principal = principal;
     }
 
     public String getBase64Content() {
@@ -26,13 +26,5 @@ public class FileTransferDTO {
 
     public void setType(String type) {
         this.type = type;
-    }
-
-    public void setPrincipal(String principal) {
-        this.principal = principal;
-    }
-
-    public String getPrincipal() {
-        return principal;
     }
 }

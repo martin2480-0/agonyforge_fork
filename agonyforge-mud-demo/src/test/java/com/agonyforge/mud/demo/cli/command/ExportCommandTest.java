@@ -136,6 +136,7 @@ public class ExportCommandTest {
         ExportCommand uut = new ExportCommand(repositoryBundle, commService, applicationContext, importExportService);
 
         List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
+        when(importExportService.export(any(), any())).thenReturn("---");
 
         Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
 
@@ -143,12 +144,11 @@ public class ExportCommandTest {
 
         verify(importExportService).export(eq(tokens.get(1).toLowerCase()),any());
 
+
         verify(commService).triggerDownload(userPrincipal);
 
 
-
     }
-
 
     @Test
     void testExportIOException() throws IOException {

@@ -7,6 +7,7 @@ import com.agonyforge.mud.demo.model.impl.*;
 import com.agonyforge.mud.demo.model.repository.*;
 import com.agonyforge.mud.demo.service.CommService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import jakarta.transaction.Transactional;
@@ -28,6 +29,7 @@ public class ImportExportService {
     private final RoleRepository roleRepository;
     static final private String tmpDir = System.getProperty("java.io.tmpdir");
     static Path agonyForgePath = Paths.get(tmpDir, "agonyforge");
+    private final ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
 
     @Autowired
     public ImportExportService(RepositoryBundle repositoryBundle, CommService commService, RoleRepository roleRepository) {
@@ -59,8 +61,7 @@ public class ImportExportService {
 
         CharacterExportDTO characterExportDTO = new CharacterExportDTO(characterDTO, items);
 
-        ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
-        return yamlMapper.writeValueAsString(characterExportDTO);
+        return objectMapper.writeValueAsString(characterExportDTO);
     }
 
     private Map<Effort, Integer> exportEfforts(MudCharacter ch) {
@@ -83,7 +84,7 @@ public class ImportExportService {
 
 
     private List<ItemDTO> exportChItems(MudCharacter ch) {
-        List<MudItem> items = getRepositoryBundle().getItemRepository().findByLocationHeld(ch);
+        List<MudItem> items = repositoryBundle.getItemRepository().findByLocationHeld(ch);
 
         List<MudItem> notHeld = items
             .stream()
@@ -127,8 +128,7 @@ public class ImportExportService {
             item -> createItemDTO(item.getItem()))
             .collect(Collectors.toList());
 
-        ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
-        return yamlMapper.writeValueAsString(itemDTOS);
+        return objectMapper.writeValueAsString(itemDTOS);
 
     }
 
@@ -139,7 +139,14 @@ public class ImportExportService {
         item.getItem().setNameList(itemDTO.getItemNames());
         item.getItem().setShortDescription(itemDTO.getShortDescription());
         item.getItem().setLongDescription(itemDTO.getLongDescription());
-        item.getItem().setWearSlots(EnumSet.copyOf(itemDTO.getWearSlots()));
+
+        List<WearSlot> wearSlots = itemDTO.getWearSlots();
+
+        if (wearSlots != null && !wearSlots.isEmpty()) {
+            item.getItem().setWearSlots(EnumSet.copyOf(wearSlots));
+        } else {
+            item.getItem().setWearSlots(EnumSet.noneOf(WearSlot.class));
+        }
         item.getItem().setWearMode(itemDTO.getWearMode());
 
         return item;
@@ -188,8 +195,10 @@ public class ImportExportService {
     @Transactional
     public boolean importItems(String yamlFileContent) {
         try {
-            ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
-            List<ItemDTO> itemDTOS = objectMapper.readValue(yamlFileContent, List.class);
+            List<ItemDTO> itemDTOS = objectMapper.readValue(
+                yamlFileContent,
+                new TypeReference<>() {}
+            );
             List<MudItemTemplate> templates = new ArrayList<>();
             var itemPrototypeRepository = repositoryBundle.getItemPrototypeRepository();
 
@@ -201,7 +210,6 @@ public class ImportExportService {
 
             return true;
         }catch (Exception e){
-            String message = e.getMessage();
             return false;
         }
 
@@ -254,7 +262,6 @@ public class ImportExportService {
 
             List<Long> roomCharacterIds = roomCharacters.stream().map(CharacterDTO::getId).toList();
 
-
             Set<RoomFlag> flags = new HashSet<>(room.getFlags());
 
             MapExportDTO.RoomDTO roomDTO = new MapExportDTO.RoomDTO(id, zoneId, name, description, exitDTOs, roomItemIds, roomCharacterIds, flags);
@@ -266,21 +273,20 @@ public class ImportExportService {
         });
         MapExportDTO mapExportDTO = new MapExportDTO(roomDTOs, characters ,items);
 
-        ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
-        return yamlMapper.writeValueAsString(mapExportDTO);
+        return objectMapper.writeValueAsString(mapExportDTO);
 
     }
 
+    @Transactional
     public boolean importPlayerCharacter(String principal, String yamlFileContent) {
         try {
-            ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
             CharacterExportDTO characterExportDTO = objectMapper.readValue(yamlFileContent, CharacterExportDTO.class);
             MudItemRepository mudItemRepository = repositoryBundle.getItemRepository();
             MudCharacterRepository mudCharacterRepository = repositoryBundle.getCharacterRepository();
             MudItemPrototypeRepository itemPrototypeRepository = repositoryBundle.getItemPrototypeRepository();
-            RoleRepository roleRepository = getRoleRepository();
 
             List<MudItemTemplate> itemTemplates = new ArrayList<>();
+
 
             for (ItemDTO itemDTO : characterExportDTO.getItems()) {
                 itemTemplates.add(importItem(itemDTO));
@@ -290,13 +296,19 @@ public class ImportExportService {
 
             var characterDTO = characterExportDTO.getCharacter();
 
+            Optional<MudCharacter> chrOptional = mudCharacterRepository.findByCharacterName(characterDTO.getName());
+
+            if (chrOptional.isPresent()) {
+                return false;
+            }
+
             Set<Role> roles = new HashSet<>();
             for (String roleNames: characterDTO.getRoles()){
                 Optional<Role> role = roleRepository.findByName(roleNames);
                 if (role.isPresent()) {
                     roles.add(role.get());
                 }else {
-                    throw new Exception(); // TODO handle error gracefully
+                    throw new Exception();
                 }
             }
 
@@ -308,6 +320,8 @@ public class ImportExportService {
 
 
             MudCharacterTemplate character = importPlayer(characterDTO, playerComponent);
+
+            character.setComplete(true);
 
             MudCharacter mudCharacter = character.buildInstance();
 
@@ -329,7 +343,6 @@ public class ImportExportService {
     @Transactional
     public boolean importMap(String yamlFileContent) {
         try {
-            ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
             MapExportDTO mapExportDTO = objectMapper.readValue(yamlFileContent, MapExportDTO.class);
             MudItemPrototypeRepository itemPrototypeRepository = repositoryBundle.getItemPrototypeRepository();
             MudCharacterPrototypeRepository characterPrototypeRepository = repositoryBundle.getCharacterPrototypeRepository();
@@ -408,20 +421,8 @@ public class ImportExportService {
             case "items" -> exportAllItemsAsYAML();
             case "character" -> exportCharacterAsYAML(ch);
             case "map" -> exportMapAsYAML();
-            default -> "{}";
+            default -> "---";
         };
-    }
-
-    public RepositoryBundle getRepositoryBundle() {
-        return repositoryBundle;
-    }
-
-    public CommService getCommService() {
-        return commService;
-    }
-
-    public RoleRepository getRoleRepository() {
-        return roleRepository;
     }
     
 }
