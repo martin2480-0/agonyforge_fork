@@ -21,8 +21,7 @@ import org.springframework.context.ApplicationContext;
 import java.util.*;
 
 import static com.agonyforge.mud.core.config.SessionConfiguration.MUD_CHARACTER;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -69,18 +68,27 @@ public class ForceCommandTest {
     @Mock
     private CommandReference commandReference;
 
+    @Mock
+    private Command command;
+
+    private Map<String, Object> attributes = new HashMap<>();
+
 
     @BeforeEach
     void setUp() {
         Long chId = RANDOM.nextLong();
         Long targetId = RANDOM.nextLong();
 
-        lenient().when(wsContext.getAttributes()).thenReturn(Map.of(MUD_CHARACTER, chId));
+
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put(MUD_CHARACTER, chId);
+        lenient().when(wsContext.getAttributes()).thenReturn(attributes);
 
         lenient().when(repositoryBundle.getCharacterRepository()).thenReturn(mudCharacterRepository);
 
         lenient().when(repositoryBundle.getCharacterRepository()).thenReturn(mudCharacterRepository);
         lenient().when(mudCharacterRepository.findById(eq(chId))).thenReturn(Optional.of(ch));
+        lenient().when(mudCharacterRepository.findById(eq(targetId))).thenReturn(Optional.of(target));
         lenient().when(ch.getLocation()).thenReturn(chLocation);
         lenient().when(chLocation.getRoom()).thenReturn(destination);
         lenient().when(ch.getCharacter()).thenReturn(chCharacter);
@@ -178,21 +186,32 @@ public class ForceCommandTest {
     }
 
     @Test
-    @Disabled
     void testSupportedCommand() {
-        when(commandRepository.findByNameIgnoreCase("who")).thenReturn(Optional.of(commandReference)); // TODO use better command
+        when(commandRepository.findByNameIgnoreCase("say")).thenReturn(Optional.of(commandReference));
         when(commandReference.isCanBeForced()).thenReturn(true);
+        when(commandReference.getBeanName()).thenReturn("sayCommand");
+        when(applicationContext.getBean("sayCommand", Command.class)).thenReturn(command);
+        when(target.isFrozen()).thenReturn(false);
 
-        String command = "force Target who";
+
+
+        String commandVal = "force Target say hi";
         Output output = new Output();
 
         ForceCommand uut = new ForceCommand(repositoryBundle, commService, applicationContext, commandRepository);
 
-        List<String> tokens = Arrays.asList(command.toUpperCase().split(" "));
+        List<String> tokens = Arrays.asList(commandVal.toUpperCase().split(" "));
 
-        Question result = uut.execute(question, wsContext, tokens, new Input(command), output);
+        Question result = uut.execute(question, wsContext, tokens, new Input(commandVal), output);
 
         assertEquals(question, result);
+
+        verify(command, atLeastOnce()).execute(any(), any(),eq(List.of("SAY", "HI")) , eq(new Input("say hi")), any(Output.class));
+
+        assertFalse(attributes.containsKey("force_user"));
+
+        verify(commService).sendTo(eq(target), any());
+        verify(commService).sendTo(eq(ch), any());
 
     }
 

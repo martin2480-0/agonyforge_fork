@@ -76,9 +76,6 @@ public class ForceCommand extends AbstractCommand {
             return question;
         }
 
-        output.append("[yellow]You forced %s to: %s",target.getCharacter().getName(), fullCommand);
-        getCommService().sendTo(target, new Output("[yellow]%s forced you to: %s", ch.getCharacter().getName(), fullCommand));
-
         // replaces current user with the one who is forced to do something
         webSocketContext.getAttributes().put("force_user", target.getCharacter().getId());
 
@@ -98,8 +95,17 @@ public class ForceCommand extends AbstractCommand {
             forceCommandTokens.add(token.toUpperCase());
         }
 
+        Output forcedUserOutput = new Output();
 
-        command.execute(question, webSocketContext, List.of(forceCommandTokens.toArray(new String[0])) , new Input(fullCommand), new Output());
+        command.execute(question, webSocketContext, List.of(forceCommandTokens.toArray(new String[0])) , new Input(fullCommand), forcedUserOutput);
+
+        String forceDescription = String.format("[yellow]%s forced you to: %s\n", ch.getCharacter().getName(), fullCommand);
+        Output forcedUserOutputToTarget = new Output(new Output(forceDescription), new Output(" "), forcedUserOutput);
+        getCommService().sendTo(target, forcedUserOutputToTarget);
+
+        forcedUserOutput = forcedUserOutput.prepend(String.format("[yellow]%s beheld the following:", target.getCharacter().getName()));
+        forcedUserOutput = forcedUserOutput.prepend(" ");
+        getCommService().sendTo(ch, forcedUserOutput);
 
         webSocketContext.getAttributes().remove("force_user");
 

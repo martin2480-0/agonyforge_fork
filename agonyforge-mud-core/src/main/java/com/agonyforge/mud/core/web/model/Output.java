@@ -47,6 +47,29 @@ public class Output {
         return this;
     }
 
+    public Output prepend(String output, Object... args) {
+        lines.add(0, nonBreakingSpaces(String.format(output, args)));
+        return this;
+    }
+
+    public Output prepend(Collection<String> output) {
+        List<String> processed = new ArrayList<>();
+        for (String line : output) {
+            processed.add(nonBreakingSpaces(line));
+        }
+        lines.addAll(0, processed);
+        return this;
+    }
+
+    public Output prepend(Output... outputs) {
+        List<String> collected = new ArrayList<>();
+        for (Output output : outputs) {
+            collected.addAll(output.lines);
+        }
+        lines.addAll(0, collected);
+        return this;
+    }
+
 
     public List<String> getOutput() {
         return toList();
